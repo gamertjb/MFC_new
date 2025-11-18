@@ -284,7 +284,7 @@ contains
                         end do
                     end do
                 #:endcall GPU_PARALLEL_LOOP
-            #:endif
+            end if
         end if
 
     end subroutine s_apply_capillary_source_flux
