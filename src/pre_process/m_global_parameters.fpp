@@ -263,6 +263,7 @@ module m_global_parameters
     !> @name Surface Tension Modeling
     !> @{
     real(wp) :: sigma
+    real(wp) :: sigma_2
     logical :: surface_tension
     !> @}
 
@@ -525,6 +526,7 @@ contains
 
         ! surface tension modeling
         sigma = dflt_real
+        sigma_2 = dflt_real
         pi_fac = 1._wp
 
         ! Immersed Boundaries

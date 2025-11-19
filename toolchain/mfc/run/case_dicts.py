@@ -52,6 +52,7 @@ COMMON = {
     'relax': ParamType.LOG,
     'relax_model': ParamType.INT,
     'sigma': ParamType.REAL,
+    'sigma_2': ParamType.REAL,
     'adv_n': ParamType.LOG,
     'cfl_adap_dt': ParamType.LOG,
     'cfl_const_dt': ParamType.LOG,
