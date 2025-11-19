@@ -81,6 +81,8 @@ contains
         !!  @param qv Fluid reference energy
     subroutine s_convert_to_mixture_variables(q_vf, i, j, k, &
                                               rho, gamma, pi_inf, qv, Re_K, G_K, G)
+        $:GPU_ROUTINE(function_name='s_convert_to_mixture_variables',parallelism='[seq]', &
+            & cray_inline=True)
 
         type(scalar_field), dimension(sys_size), intent(in) :: q_vf
         integer, intent(in) :: i, j, k
@@ -204,6 +206,8 @@ contains
         !! @param qv fluid reference energy
     subroutine s_convert_mixture_to_mixture_variables(q_vf, i, j, k, &
                                                       rho, gamma, pi_inf, qv)
+        $:GPU_ROUTINE(function_name='s_convert_mixture_to_mixture_variables',parallelism='[seq]', &
+            & cray_inline=True)
 
         type(scalar_field), dimension(sys_size), intent(in) :: q_vf
         integer, intent(in) :: i, j, k
@@ -246,6 +250,8 @@ contains
         !! @param qv fluid reference energy
     subroutine s_convert_species_to_mixture_variables_bubbles(q_vf, j, k, l, &
                                                               rho, gamma, pi_inf, qv, Re_K)
+        $:GPU_ROUTINE(function_name='s_convert_species_to_mixture_variables_bubbles',parallelism='[seq]', &
+            & cray_inline=True)
 
         type(scalar_field), dimension(sys_size), intent(in) :: q_vf
 
@@ -368,6 +374,8 @@ contains
         !! @param qv fluid reference energy
     subroutine s_convert_species_to_mixture_variables(q_vf, k, l, r, rho, &
                                                       gamma, pi_inf, qv, Re_K, G_K, G)
+        $:GPU_ROUTINE(function_name='s_convert_species_to_mixture_variables',parallelism='[seq]', &
+            & cray_inline=True)
 
         type(scalar_field), dimension(sys_size), intent(in) :: q_vf
 
