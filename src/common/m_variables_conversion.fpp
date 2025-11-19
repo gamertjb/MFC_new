@@ -79,6 +79,7 @@ contains
         !!  @param gamma Specific heat ratio function
         !!  @param pi_inf Liquid stiffness function
         !!  @param qv Fluid reference energy
+    $:GPU_ROUTINE(function_name='s_convert_to_mixture_variables', parallelism='[seq]')
     subroutine s_convert_to_mixture_variables(q_vf, i, j, k, &
                                               rho, gamma, pi_inf, qv, Re_K, G_K, G)
 
@@ -202,6 +203,7 @@ contains
         !! @param gamma  specific heat ratio function
         !! @param pi_inf liquid stiffness
         !! @param qv fluid reference energy
+    $:GPU_ROUTINE(function_name='s_convert_mixture_to_mixture_variables', parallelism='[seq]')
     subroutine s_convert_mixture_to_mixture_variables(q_vf, i, j, k, &
                                                       rho, gamma, pi_inf, qv)
 
@@ -244,6 +246,7 @@ contains
         !! @param gamma specific heat ratio
         !! @param pi_inf liquid stiffness
         !! @param qv fluid reference energy
+    $:GPU_ROUTINE(function_name='s_convert_species_to_mixture_variables_bubbles', parallelism='[seq]')
     subroutine s_convert_species_to_mixture_variables_bubbles(q_vf, j, k, l, &
                                                               rho, gamma, pi_inf, qv, Re_K)
 
@@ -366,6 +369,7 @@ contains
         !! @param gamma specific heat ratio
         !! @param pi_inf liquid stiffness
         !! @param qv fluid reference energy
+    $:GPU_ROUTINE(function_name='s_convert_species_to_mixture_variables', parallelism='[seq]')
     subroutine s_convert_species_to_mixture_variables(q_vf, k, l, r, rho, &
                                                       gamma, pi_inf, qv, Re_K, G_K, G)
 
