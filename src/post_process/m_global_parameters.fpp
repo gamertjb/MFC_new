@@ -325,6 +325,7 @@ module m_global_parameters
     !> @{
 
     real(wp) :: sigma
+    real(wp) :: sigma_2
     logical :: surface_tension
     !> #}
 
@@ -496,6 +497,7 @@ contains
         poly_sigma = dflt_real
         sigR = dflt_real
         sigma = dflt_real
+        sigma_2 = dflt_real
         surface_tension = .false.
         adv_n = .false.
 
