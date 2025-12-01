@@ -54,7 +54,9 @@ contains
 
         @:ALLOCATE(c_divs(1:num_dims + 1))
 
-        if (num_fluids > 2) @:ALLOCATE(c2_divs(1:num_dims + 1))
+        if (num_fluids > 2) then
+            @:ALLOCATE(c2_divs(1:num_dims + 1))
+        end if
 
         do j = 1, num_dims + 1
             @:ALLOCATE(c_divs(j)%sf(idwbuff(1)%beg:idwbuff(1)%end, idwbuff(2)%beg:idwbuff(2)%end, idwbuff(3)%beg:idwbuff(3)%end))
@@ -601,20 +603,30 @@ contains
 
         do j = 1, num_dims
             @:DEALLOCATE(c_divs(j)%sf)
-            if (num_fluids > 2) @:DEALLOCATE(c2_divs(j)%sf)
+            if (num_fluids > 2) then
+                @:DEALLOCATE(c2_divs(j)%sf)
+            end if
         end do
 
         @:DEALLOCATE(c_divs)
-        if (num_fluids > 2) @:DEALLOCATE(c2_divs)
+        if (num_fluids > 2) then
+            @:DEALLOCATE(c2_divs)
+        end if
 
         @:DEALLOCATE(gL_x, gR_x)
-        if (num_fluids > 2) @:DEALLOCATE(g2L_x, g2R_x)
+        if (num_fluids > 2) then
+            @:DEALLOCATE(g2L_x, g2R_x)
+        end if
 
         @:DEALLOCATE(gL_y, gR_y)
-        if (num_fluids > 2) @:DEALLOCATE(g2L_y, g2R_y)
+        if (num_fluids > 2) then
+            @:DEALLOCATE(g2L_y, g2R_y)
+        end if
         if (p > 0) then
             @:DEALLOCATE(gL_z, gR_z)
-            if (num_fluids > 2) @:DEALLOCATE(g2L_z, g2R_z)
+            if (num_fluids > 2) then
+                @:DEALLOCATE(g2L_z, g2R_z)
+            end if
         end if
 
     end subroutine s_finalize_surface_tension_module
