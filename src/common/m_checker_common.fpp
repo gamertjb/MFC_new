@@ -356,16 +356,28 @@ contains
         @:PROHIBIT(.not. f_is_default(sigma) .and. .not. surface_tension, &
             "sigma is set but surface_tension is not enabled")
 
+        @:PROHIBIT(surface_tension .and. sigma_2 < 0._wp, &
+            "sigma_2 must be greater than or equal to zero")
+
+        @:PROHIBIT(surface_tension .and. num_fluids > 2 .and. f_approx_equal(sigma_2, dflt_real), &
+            "sigma_2 must be set if surface_tension is enabled for more than two fluids")
+
+        @:PROHIBIT(.not. f_is_default(sigma_2) .and. .not. surface_tension, &
+            "sigma_2 is set but surface_tension is not enabled")
+
         @:PROHIBIT(surface_tension .and. (model_eqns /= 3 .and. model_eqns /=2), &
             "The surface tension model requires model_eqns=3 or model_eqns=2")
 
-        @:PROHIBIT(surface_tension .and. num_fluids /= 2, &
-            "The surface tension model requires num_fluids=2")
+        @:PROHIBIT(surface_tension .and. num_fluids < 2, &
+            "The surface tension model requires num_fluids>=2")
 
 #ifdef MFC_PRE_PROCESS
         do i = 1, num_patches
             @:PROHIBIT(surface_tension .and. f_is_default(patch_icpp(i)%cf_val), &
                 "patch_icpp(i)%cf_val must be set if surface_tension is enabled")
+
+            @:PROHIBIT(surface_tension .and. num_fluids > 2 .and. f_is_default(patch_icpp(i)%cf_val2), &
+                "patch_icpp(i)%cf_val2 must be set for three-fluid surface tension")
         end do
 #endif MFC_PRE_PROCESS
 
