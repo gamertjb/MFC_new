@@ -342,7 +342,8 @@ Additional details on this specification can be found in [The Naca Airfoil Serie
 | `cv`   ** | Real   | Sffened-gas parameter $c_v$ of fluid.          |
 | `qv`   ** | Real   | Stiffened-gas parameter $q$ of fluid.          |
 | `qvp`  ** | Real   | Stiffened-gas parameter $q'$ of fluid.         |
-| `sigma`   | Real   | Surface tension coefficient                    |
+| `sigma`   | Real   | Surface tension coefficient for fluids 1–2     |
+| `sigma_2` | Real   | Surface tension coefficient for fluids 1–3     |
 | `G`       | Real   | Shear modulus of solid.                        |
 
 Fluid material's parameters. All parameters except for sigma should be prepended with `fluid_pp(i)` where $i$ is the fluid index.
@@ -507,7 +508,7 @@ If this option is false, velocity gradient is computed using finite difference s
 - `weno_avg` it activates the arithmetic average of the left and right, WENO-reconstructed, cell-boundary values.
 This option requires `weno_Re_flux` to be true because cell boundary values are only utilized when employing the scalar divergence method in the computation of velocity gradients.
 
-- `surface_tension` activates surface tension when set to ``'T'``. Requires `sigma` to be set and `num_fluids`. The color function in each patch should be assigned such that `patch_icpp(i)%cf_val = 1` in patches where `patch_icpp(i)%alpha = 1 - eps` and `patch_icpp(i)%cf_val = 0` in patches where `patch_icpp(i)%alpha = eps`.
+- `surface_tension` activates surface tension when set to ``'T'``. Requires `sigma` to be set and `num_fluids`. For three-fluid configurations, set `sigma_2` to the coefficient between fluids 1 and 3 and provide `patch_icpp(i)%cf_val2` in addition to `patch_icpp(i)%cf_val` so the two interfaces can be initialized independently. Each color function should be assigned such that regions dominated by fluid 1 use `1` and other regions use `0` for the corresponding interface indicator.
 
 - `viscous` activates viscosity when set to ``'T'``. Requires `Re(1)` and `Re(2)` to be set.
 
