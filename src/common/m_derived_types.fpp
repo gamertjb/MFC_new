@@ -263,6 +263,7 @@ module m_derived_types
         !! id for hard coded initial condition
 
         real(wp) :: cf_val !! color function value
+        real(wp) :: cf_val2 !! secondary color function value
         real(wp) :: Y(1:num_species)
 
         !! STL or OBJ model input parameter

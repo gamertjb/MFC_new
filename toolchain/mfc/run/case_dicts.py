@@ -52,6 +52,7 @@ COMMON = {
     'relax': ParamType.LOG,
     'relax_model': ParamType.INT,
     'sigma': ParamType.REAL,
+    'sigma_2': ParamType.REAL,
     'adv_n': ParamType.LOG,
     'cfl_adap_dt': ParamType.LOG,
     'cfl_const_dt': ParamType.LOG,
@@ -221,6 +222,7 @@ for p_id in range(1, 10+1):
         PRE_PROCESS[f'patch_icpp({p_id})%tau_e({taue_id})'] = ParamType.REAL.analytic()
 
     PRE_PROCESS[f'patch_icpp({p_id})%cf_val'] = ParamType.REAL.analytic()
+    PRE_PROCESS[f'patch_icpp({p_id})%cf_val2'] = ParamType.REAL.analytic()
 
     if p_id >= 2:
         PRE_PROCESS[f'patch_icpp({p_id})%alter_patch'] = ParamType.LOG
