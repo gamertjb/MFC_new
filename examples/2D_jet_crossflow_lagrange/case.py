@@ -68,8 +68,8 @@ cfl = 0.5
 dt = cfl * (dx / c0) * (c0 / x0)
 
 # end time and output cadence (nondimensional)
-t_stop = 50.0
-t_save = t_stop / 40.0
+t_stop = 3.0e-6 * c0 / x0  # 3 microseconds of physical time
+t_save = t_stop / 50.0
 
 # -----------------------------------------------------------------------------
 # Geometry helpers
