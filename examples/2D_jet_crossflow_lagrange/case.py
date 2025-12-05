@@ -18,6 +18,7 @@ T0 = 300.0  # K
 # Fluid properties
 # -----------------------------------------------------------------------------
 rho_liq = rho0
+rho_vap = 2.5
 rho_air = 1.2
 
 gamma_liq = 4.0
@@ -29,6 +30,10 @@ pv_liq = 2500.0  # Pa
 
 gamma_air = 1.4
 mu_air = 1.8e-5
+
+gamma_vap = 1.09
+pi_inf_vap = 0.0
+mu_vap = 1.5e-5
 
 # Gas/vapor transport properties for the Lagrangian model
 cp_g = 1.0e3
@@ -88,9 +93,11 @@ bubble_radius = 0.10  # fraction of jet diameter (already nondimensional)
 # -----------------------------------------------------------------------------
 _eps = 1.0e-6
 alpha_liq_cross = _eps
-alpha_air_cross = 1.0 - _eps
+alpha_vap_cross = _eps
+alpha_air_cross = 1.0 - 2.0 * _eps
 
-alpha_liq_jet = 1.0 - _eps
+alpha_liq_jet = 1.0 - 2.0 * _eps
+alpha_vap_jet = _eps
 alpha_air_jet = _eps
 
 print(
@@ -113,14 +120,15 @@ print(
             "t_save": t_save,
             # Numerics --------------------------------------------------------
             "num_patches": 2,
-            "model_eqns": 2,
-            "num_fluids": 2,
+            "model_eqns": 3,
+            "num_fluids": 3,
             "alt_soundspeed": "F",
             "mpp_lim": "T",
             "riemann_solver": 2,
             "wave_speeds": 1,
             "avg_state": 2,
             "viscous": "T",
+            "surface_tension": "T",
             "weno_order": 5,
             "weno_eps": 1.0e-16,
             "mapped_weno": "T",
@@ -158,9 +166,13 @@ print(
             "patch_icpp(1)%vel(2)": 0.0,
             "patch_icpp(1)%pres": 101325.0 / p0,
             "patch_icpp(1)%alpha_rho(1)": alpha_liq_cross * rho_liq / rho0,
-            "patch_icpp(1)%alpha_rho(2)": alpha_air_cross * rho_air / rho0,
+            "patch_icpp(1)%alpha_rho(2)": alpha_vap_cross * rho_vap / rho0,
+            "patch_icpp(1)%alpha_rho(3)": alpha_air_cross * rho_air / rho0,
             "patch_icpp(1)%alpha(1)": alpha_liq_cross,
-            "patch_icpp(1)%alpha(2)": alpha_air_cross,
+            "patch_icpp(1)%alpha(2)": alpha_vap_cross,
+            "patch_icpp(1)%alpha(3)": alpha_air_cross,
+            "patch_icpp(1)%cf_val": 0,
+            "patch_icpp(1)%cf_val2": 0,
             # Patch 2: liquid jet carrying the seeded bubble ------------------
             "patch_icpp(2)%geometry": 3,
             "patch_icpp(2)%alter_patch(1)": "T",
@@ -172,9 +184,13 @@ print(
             "patch_icpp(2)%vel(2)": u_jet / c0,
             "patch_icpp(2)%pres": 101325.0 / p0,
             "patch_icpp(2)%alpha_rho(1)": alpha_liq_jet * rho_liq / rho0,
-            "patch_icpp(2)%alpha_rho(2)": alpha_air_jet * rho_air / rho0,
+            "patch_icpp(2)%alpha_rho(2)": alpha_vap_jet * rho_vap / rho0,
+            "patch_icpp(2)%alpha_rho(3)": alpha_air_jet * rho_air / rho0,
             "patch_icpp(2)%alpha(1)": alpha_liq_jet,
-            "patch_icpp(2)%alpha(2)": alpha_air_jet,
+            "patch_icpp(2)%alpha(2)": alpha_vap_jet,
+            "patch_icpp(2)%alpha(3)": alpha_air_jet,
+            "patch_icpp(2)%cf_val": 1,
+            "patch_icpp(2)%cf_val2": 1,
             # Lagrangian Bubbles ----------------------------------------------
             "bubbles_lagrange": "T",
             "bubble_model": 2,
@@ -208,14 +224,25 @@ print(
             "fluid_pp(1)%M_v": MW_v,
             "fluid_pp(1)%k_v": k_v,
             "fluid_pp(1)%cp_v": cp_v,
+            # Vapor properties for three-fluid surface tension
+            "fluid_pp(2)%gamma": 1.0 / (gamma_vap - 1.0),
+            "fluid_pp(2)%pi_inf": pi_inf_vap,
+            "fluid_pp(2)%Re(1)": 1.0 / (mu_vap / (rho0 * c0 * x0)),
+            "fluid_pp(2)%gamma_v": gamma_vap,
+            "fluid_pp(2)%M_v": MW_v,
+            "fluid_pp(2)%k_v": k_v,
+            "fluid_pp(2)%cp_v": cp_v,
             # Air crossflow / bubble gas state
-            "fluid_pp(2)%gamma": 1.0 / (gamma_air - 1.0),
-            "fluid_pp(2)%pi_inf": 0.0,
-            "fluid_pp(2)%Re(1)": 1.0 / (mu_air / (rho0 * c0 * x0)),
-            "fluid_pp(2)%gamma_v": gamma_air,
-            "fluid_pp(2)%M_v": MW_g,
-            "fluid_pp(2)%k_v": k_g,
-            "fluid_pp(2)%cp_v": cp_g,
+            "fluid_pp(3)%gamma": 1.0 / (gamma_air - 1.0),
+            "fluid_pp(3)%pi_inf": 0.0,
+            "fluid_pp(3)%Re(1)": 1.0 / (mu_air / (rho0 * c0 * x0)),
+            "fluid_pp(3)%gamma_v": gamma_air,
+            "fluid_pp(3)%M_v": MW_g,
+            "fluid_pp(3)%k_v": k_g,
+            "fluid_pp(3)%cp_v": cp_g,
+            # Surface tension coefficients for interfaces 1-2 and 1-3
+            "sigma": sigma_liq,
+            "sigma_2": sigma_liq,
         }
     )
 )
