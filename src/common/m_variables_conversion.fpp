@@ -1052,11 +1052,12 @@ contains
                                 nRtmp(i) = qK_cons_vf(bubrs_vc(i))%sf(j, k, l)
                             end do
 
-                            vftmp = qK_cons_vf(alf_idx)%sf(j, k, l)
+                              vftmp = max(qK_cons_vf(alf_idx)%sf(j, k, l), sgm_eps)
 
                             if (qbmm) then
                                 !Get nb (constant across all R0 bins)
                                 nbub_sc = qK_cons_vf(bubxb)%sf(j, k, l)
+                                nbub_sc = max(nbub_sc, sgm_eps)
 
                                 !Convert cons to prim
                                 $:GPU_LOOP(parallelism='[seq]')
@@ -1075,6 +1076,8 @@ contains
                                 else
                                     call s_comp_n_from_cons(vftmp, nRtmp, nbub_sc, weight)
                                 end if
+
+                                nbub_sc = max(nbub_sc, sgm_eps)
 
                                 $:GPU_LOOP(parallelism='[seq]')
                                 do i = bubxb, bubxe
@@ -1130,6 +1133,7 @@ contains
 
                         if (surface_tension) then
                             qK_prim_vf(c_idx)%sf(j, k, l) = qK_cons_vf(c_idx)%sf(j, k, l)
+                            if (c2_idx > 0) qK_prim_vf(c2_idx)%sf(j, k, l) = qK_cons_vf(c2_idx)%sf(j, k, l)
                         end if
 
                         if (cont_damage) qK_prim_vf(damage_idx)%sf(j, k, l) = qK_cons_vf(damage_idx)%sf(j, k, l)
@@ -1355,6 +1359,8 @@ contains
                             nbub = 3._wp*q_prim_vf(alf_idx)%sf(j, k, l)/(4._wp*pi*R3tmp)
                         end if
 
+                        nbub = max(nbub, sgm_eps)
+
                         if (j == 0 .and. k == 0 .and. l == 0) print *, 'In convert, nbub:', nbub
 
                         do i = bub_idx%beg, bub_idx%end
@@ -1403,6 +1409,7 @@ contains
 
                     if (surface_tension) then
                         q_cons_vf(c_idx)%sf(j, k, l) = q_prim_vf(c_idx)%sf(j, k, l)
+                        if (c2_idx > 0) q_cons_vf(c2_idx)%sf(j, k, l) = q_prim_vf(c2_idx)%sf(j, k, l)
                     end if
 
                     if (cont_damage) q_cons_vf(damage_idx)%sf(j, k, l) = q_prim_vf(damage_idx)%sf(j, k, l)

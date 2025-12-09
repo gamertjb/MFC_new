@@ -117,7 +117,6 @@ contains
         @:PROHIBIT(bubbles_euler .and. (.not. polytropic) .and. f_is_default(R0ref), "R0ref must be set if using bubbles_euler with polytropic = .false.")
         @:PROHIBIT(bubbles_euler .and. nb == dflt_int, "nb must be set if using bubbles_euler")
         @:PROHIBIT(bubbles_euler .and. thermal > 3)
-        @:PROHIBIT(bubbles_euler .and. model_eqns == 3, "Bubble models untested with 6-equation model (model_eqns = 3)")
         @:PROHIBIT(bubbles_euler .and. model_eqns == 1, "Bubble models untested with pi-gamma model (model_eqns = 1)")
         @:PROHIBIT(bubbles_euler .and. model_eqns == 4 .and. f_is_default(rhoref), "rhoref must be set if using bubbles_euler with model_eqns = 4")
         @:PROHIBIT(bubbles_euler .and. model_eqns == 4 .and. f_is_default(pref), "pref must be set if using bubbles_euler with model_eqns = 4")
@@ -356,16 +355,28 @@ contains
         @:PROHIBIT(.not. f_is_default(sigma) .and. .not. surface_tension, &
             "sigma is set but surface_tension is not enabled")
 
+        @:PROHIBIT(surface_tension .and. sigma_2 < 0._wp, &
+            "sigma_2 must be greater than or equal to zero")
+
+        @:PROHIBIT(surface_tension .and. num_fluids > 2 .and. f_approx_equal(sigma_2, dflt_real), &
+            "sigma_2 must be set if surface_tension is enabled for more than two fluids")
+
+        @:PROHIBIT(.not. f_is_default(sigma_2) .and. .not. surface_tension, &
+            "sigma_2 is set but surface_tension is not enabled")
+
         @:PROHIBIT(surface_tension .and. (model_eqns /= 3 .and. model_eqns /=2), &
             "The surface tension model requires model_eqns=3 or model_eqns=2")
 
-        @:PROHIBIT(surface_tension .and. num_fluids /= 2, &
-            "The surface tension model requires num_fluids=2")
+        @:PROHIBIT(surface_tension .and. num_fluids < 2, &
+            "The surface tension model requires num_fluids>=2")
 
 #ifdef MFC_PRE_PROCESS
         do i = 1, num_patches
             @:PROHIBIT(surface_tension .and. f_is_default(patch_icpp(i)%cf_val), &
                 "patch_icpp(i)%cf_val must be set if surface_tension is enabled")
+
+            @:PROHIBIT(surface_tension .and. num_fluids > 2 .and. f_is_default(patch_icpp(i)%cf_val2), &
+                "patch_icpp(i)%cf_val2 must be set for three-fluid surface tension")
         end do
 #endif MFC_PRE_PROCESS
 
