@@ -89,7 +89,7 @@ print(
             "t_step_save": int(save_interval),
             # Simulation algorithm parameters --------------------------------
             "num_patches": 2,
-            "model_eqns": 2,
+            "model_eqns": 3,
             "alt_soundspeed": "F",
             "num_fluids": 3,
             "mpp_lim": "F",

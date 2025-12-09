@@ -117,7 +117,6 @@ contains
         @:PROHIBIT(bubbles_euler .and. (.not. polytropic) .and. f_is_default(R0ref), "R0ref must be set if using bubbles_euler with polytropic = .false.")
         @:PROHIBIT(bubbles_euler .and. nb == dflt_int, "nb must be set if using bubbles_euler")
         @:PROHIBIT(bubbles_euler .and. thermal > 3)
-        @:PROHIBIT(bubbles_euler .and. model_eqns == 3, "Bubble models untested with 6-equation model (model_eqns = 3)")
         @:PROHIBIT(bubbles_euler .and. model_eqns == 1, "Bubble models untested with pi-gamma model (model_eqns = 1)")
         @:PROHIBIT(bubbles_euler .and. model_eqns == 4 .and. f_is_default(rhoref), "rhoref must be set if using bubbles_euler with model_eqns = 4")
         @:PROHIBIT(bubbles_euler .and. model_eqns == 4 .and. f_is_default(pref), "pref must be set if using bubbles_euler with model_eqns = 4")
