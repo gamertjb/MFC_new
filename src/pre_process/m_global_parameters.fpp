@@ -776,15 +776,15 @@ contains
             E_idx = mom_idx%end + 1
             adv_idx%beg = E_idx + 1
             adv_idx%end = E_idx + num_fluids
-            internalEnergies_idx%beg = adv_idx%end + 1
-            internalEnergies_idx%end = adv_idx%end + num_fluids
-            sys_size = internalEnergies_idx%end
-
             if (bubbles_euler) then
-                alf_idx = adv_idx%end
+                alf_idx = adv_idx%end + 1
+                internalEnergies_idx%beg = alf_idx + 1
             else
-                alf_idx = 1
+                alf_idx = adv_idx%end
+                internalEnergies_idx%beg = adv_idx%end + 1
             end if
+            internalEnergies_idx%end = internalEnergies_idx%beg + num_fluids - 1
+            sys_size = internalEnergies_idx%end
 
             if (bubbles_euler) then
                 bub_idx%beg = sys_size + 1
