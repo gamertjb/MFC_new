@@ -289,11 +289,12 @@ module m_global_parameters
     integer :: tensor_size                             !< Number of elements in the full tensor plus one
     type(int_bounds_info) :: species_idx               !< Indexes of first & last concentration eqns.
     integer :: c_idx                                   !< Index of color function
+    integer :: c2_idx                                  !< Index of secondary color function
     integer :: damage_idx                              !< Index of damage state variable (D) for continuum damage model
     !> @}
     $:GPU_DECLARE(create='[sys_size,E_idx,n_idx,bub_idx,alf_idx,gamma_idx]')
     $:GPU_DECLARE(create='[pi_inf_idx,B_idx,stress_idx,xi_idx,b_size]')
-    $:GPU_DECLARE(create='[tensor_size,species_idx,c_idx]')
+    $:GPU_DECLARE(create='[tensor_size,species_idx,c_idx,c2_idx]')
 
     ! Cell Indices for the (local) interior points (O-m, O-n, 0-p).
     ! Stands for "InDices With INTerior".
@@ -497,8 +498,9 @@ module m_global_parameters
     !> @{
 
     real(wp) :: sigma
+    real(wp) :: sigma_2
     logical :: surface_tension
-    $:GPU_DECLARE(create='[sigma,surface_tension]')
+    $:GPU_DECLARE(create='[sigma,sigma_2,surface_tension]')
     !> @}
 
     integer :: momxb, momxe
@@ -730,6 +732,7 @@ contains
 
         ! Surface tension
         sigma = dflt_real
+        sigma_2 = dflt_real
         surface_tension = .false.
 
         bodyForces = .false.
@@ -1038,10 +1041,107 @@ contains
                 E_idx = mom_idx%end + 1
                 adv_idx%beg = E_idx + 1
                 adv_idx%end = E_idx + num_fluids
-                alf_idx = adv_idx%end
-                internalEnergies_idx%beg = adv_idx%end + 1
-                internalEnergies_idx%end = adv_idx%end + num_fluids
+                if (bubbles_euler) then
+                    alf_idx = adv_idx%end + 1
+                    internalEnergies_idx%beg = alf_idx + 1
+                else
+                    alf_idx = adv_idx%end
+                    internalEnergies_idx%beg = adv_idx%end + 1
+                end if
+                internalEnergies_idx%end = internalEnergies_idx%beg + num_fluids - 1
                 sys_size = internalEnergies_idx%end
+
+                if (bubbles_euler) then
+                    bub_idx%beg = sys_size + 1
+                    if (qbmm) then
+                        nmomsp = 4 !number of special moments
+                        if (nnode == 4) then
+                            ! nmom = 6 : It is already a parameter
+                            nmomtot = nmom*nb
+                        end if
+                        bub_idx%end = adv_idx%end + nb*nmom
+                    else
+                        if (.not. polytropic) then
+                            bub_idx%end = sys_size + 4*nb
+                        else
+                            bub_idx%end = sys_size + 2*nb
+                        end if
+                    end if
+                    sys_size = bub_idx%end
+
+                    if (adv_n) then
+                        n_idx = bub_idx%end + 1
+                        sys_size = n_idx
+                    end if
+
+                    @:ALLOCATE(weight(nb), R0(nb))
+                    @:ALLOCATE(bub_idx%rs(nb), bub_idx%vs(nb))
+                    @:ALLOCATE(bub_idx%ps(nb), bub_idx%ms(nb))
+
+                    if (num_fluids == 1) then
+                        gam = 1._wp/fluid_pp(num_fluids + 1)%gamma + 1._wp
+                    else
+                        gam = 1._wp/fluid_pp(num_fluids)%gamma + 1._wp
+                    end if
+
+                    if (qbmm) then
+                        @:ALLOCATE(bub_idx%moms(nb, nmom))
+                        do i = 1, nb
+                            do j = 1, nmom
+                                bub_idx%moms(i, j) = bub_idx%beg + (j - 1) + (i - 1)*nmom
+                            end do
+                            bub_idx%rs(i) = bub_idx%moms(i, 2)
+                            bub_idx%vs(i) = bub_idx%moms(i, 3)
+                        end do
+
+                    else
+                        do i = 1, nb
+                            if (.not. polytropic) then
+                                fac = 4
+                            else
+                                fac = 2
+                            end if
+
+                            bub_idx%rs(i) = bub_idx%beg + (i - 1)*fac
+                            bub_idx%vs(i) = bub_idx%rs(i) + 1
+
+                            if (.not. polytropic) then
+                                bub_idx%ps(i) = bub_idx%vs(i) + 1
+                                bub_idx%ms(i) = bub_idx%ps(i) + 1
+                            end if
+                        end do
+                    end if
+
+                    if (nb == 1) then
+                        weight(:) = 1._wp
+                        R0(:) = 1._wp
+                    else if (nb < 1) then
+                        stop 'Invalid value of nb'
+                    end if
+
+                    !Initialize pref,rhoref for polytropic qbmm (done in s_initialize_nonpoly for non-polytropic)
+                    if (.not. qbmm) then
+                        if (polytropic) then
+                            rhoref = 1._wp
+                            pref = 1._wp
+                        end if
+                    end if
+
+                    !Initialize pb0, pv, pref, rhoref for polytropic qbmm (done in s_initialize_nonpoly for non-polytropic)
+                    if (qbmm) then
+                        if (polytropic) then
+                            pv = fluid_pp(1)%pv
+                            pv = pv/pref
+                            @:ALLOCATE(pb0(nb))
+                            if ((f_is_default(Web))) then
+                                pb0 = pref
+                                pb0 = pb0/pref
+                                pref = 1._wp
+                            end if
+                            rhoref = 1._wp
+                        end if
+                    end if
+                end if
 
             else if (model_eqns == 4) then
                 cont_idx%beg = 1 ! one continuity equation
@@ -1180,6 +1280,16 @@ contains
             if (surface_tension) then
                 c_idx = sys_size + 1
                 sys_size = c_idx
+
+                if (num_fluids > 2) then
+                    c2_idx = sys_size + 1
+                    sys_size = c2_idx
+                else
+                    c2_idx = 0
+                end if
+            else
+                c_idx = 0
+                c2_idx = 0
             end if
 
             if (cont_damage) then
