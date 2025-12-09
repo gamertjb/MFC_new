@@ -13,18 +13,18 @@ import math
 # Baseline thermodynamic and flow parameters (physical units)
 # -----------------------------------------------------------------------------
 pA = 140000.0
-rhoA = 1.76
+rho_air = 1.76
 gam_air = 1.4
-c1 = math.sqrt(gam_air * pA / rhoA)
+c1 = math.sqrt(gam_air * pA / rho_air)
 
-pW = pA
+pL = pA
 velJ = 37.9  # jet velocity (y-direction)
 velA = 0.3 * c1  # crossflow velocity (x-direction)
-rhoW = 1000.0
-rho_vapor = 0.6
-muA = 1.85e-5
-muJ = 1.0016e-3
-mu_vapor = 1.2e-5
+rho_hex = 660.0
+rho_vapor = 2.5
+mu_air = 1.85e-5
+mu_hex = 0.30e-3
+mu_vapor = 1.5e-5
 
 # Dense vapor void fraction injected with the jet
 vapor_frac = 0.4
@@ -32,9 +32,10 @@ vapor_frac = 0.4
 # Reference Eulerian bubble parameters
 R0ref = 10.0e-6
 pv = 2300.0
-Ca = (pW - pv) / (rhoW * velJ**2)
-We = rhoW * velJ**2 * R0ref / 0.0794
-Re_inv = muJ / (rhoW * velJ * R0ref)
+Ca = (pL - pv) / (rho_hex * velJ**2)
+sigma_hex_air = 0.018
+We = rho_hex * velJ**2 * R0ref / sigma_hex_air
+Re_inv = mu_hex / (rho_hex * velJ * R0ref)
 
 # -----------------------------------------------------------------------------
 # Grid / time setup
@@ -116,7 +117,7 @@ print(
             "wave_speeds": 1,
             "avg_state": 2,
             "surface_tension": "T",
-            "viscous": "F",
+            "viscous": "T",
             "elliptic_smoothing": "T",
             "elliptic_smoothing_iters": 50,
             # Boundary conditions ---------------------------------------------
@@ -151,13 +152,13 @@ print(
             "patch_icpp(1)%vel(1)": velA,
             "patch_icpp(1)%vel(2)": 0.0,
             "patch_icpp(1)%pres": pA,
-            "patch_icpp(1)%alpha_rho(1)": eps * rhoW,
+            "patch_icpp(1)%alpha_rho(1)": eps * rho_hex,
             "patch_icpp(1)%alpha(1)": eps,
             "patch_icpp(1)%cf_val": 0,
             "patch_icpp(1)%cf_val2": 0,
-            "patch_icpp(1)%alpha_rho(2)": eps * rhoW,
+            "patch_icpp(1)%alpha_rho(2)": eps * rho_vapor,
             "patch_icpp(1)%alpha(2)": eps,
-            "patch_icpp(1)%alpha_rho(3)": (1.0 - 2.0 * eps) * rhoA,
+            "patch_icpp(1)%alpha_rho(3)": (1.0 - 2.0 * eps) * rho_air,
             "patch_icpp(1)%alpha(3)": 1.0 - 2.0 * eps,
             "patch_icpp(1)%r0": 1.0,
             "patch_icpp(1)%v0": 0.0,
@@ -170,30 +171,30 @@ print(
             "patch_icpp(2)%length_y": djet,
             "patch_icpp(2)%vel(1)": 0.0,
             "patch_icpp(2)%vel(2)": velJ,
-            "patch_icpp(2)%pres": pW,
-            "patch_icpp(2)%alpha_rho(1)": eps * rhoA,
-            "patch_icpp(2)%alpha(1)": eps,
-            "patch_icpp(2)%alpha_rho(2)": (1.0 - vapor_frac - eps) * rhoW,
-            "patch_icpp(2)%alpha(2)": 1.0 - vapor_frac - eps,
-            "patch_icpp(2)%alpha_rho(3)": vapor_frac * rho_vapor,
-            "patch_icpp(2)%alpha(3)": vapor_frac,
+            "patch_icpp(2)%pres": pL,
+            "patch_icpp(2)%alpha_rho(1)": (1.0 - vapor_frac - eps) * rho_hex,
+            "patch_icpp(2)%alpha(1)": 1.0 - vapor_frac - eps,
+            "patch_icpp(2)%alpha_rho(2)": vapor_frac * rho_vapor,
+            "patch_icpp(2)%alpha(2)": vapor_frac,
+            "patch_icpp(2)%alpha_rho(3)": eps * rho_air,
+            "patch_icpp(2)%alpha(3)": eps,
             "patch_icpp(2)%cf_val": 1,
             "patch_icpp(2)%cf_val2": 1,
             "patch_icpp(2)%r0": 1.0,
             "patch_icpp(2)%v0": 0.0,
             # Fluid properties
-            "fluid_pp(1)%gamma": 1.0 / (gam_air - 1.0),
-            "fluid_pp(1)%pi_inf": 0.0,
-            "fluid_pp(1)%Re(1)": 1 / muA,
-            "fluid_pp(2)%gamma": 1.0 / (6.3 - 1.0),
-            "fluid_pp(2)%pi_inf": 3.43e8,
-            "fluid_pp(2)%Re(1)": 1 / muJ,
-            "fluid_pp(3)%gamma": 1.0 / (1.33 - 1.0),
+            "fluid_pp(1)%gamma": 1.0 / (4.0 - 1.0),
+            "fluid_pp(1)%pi_inf": 1.649e8,
+            "fluid_pp(1)%Re(1)": 1 / mu_hex,
+            "fluid_pp(2)%gamma": 1.0 / (1.09 - 1.0),
+            "fluid_pp(2)%pi_inf": 0.0,
+            "fluid_pp(2)%Re(1)": 1 / mu_vapor,
+            "fluid_pp(3)%gamma": 1.0 / (gam_air - 1.0),
             "fluid_pp(3)%pi_inf": 0.0,
-            "fluid_pp(3)%Re(1)": 1 / mu_vapor,
+            "fluid_pp(3)%Re(1)": 1 / mu_air,
             # Surface tension --------------------------------------------------
-            "sigma": 0.0794,
-            "sigma_2": 0.0794,
+            "sigma": sigma_hex_air,
+            "sigma_2": sigma_hex_air,
         }
     )
 )
