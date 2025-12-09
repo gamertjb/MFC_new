@@ -119,6 +119,7 @@ module m_global_parameters
     type(int_bounds_info) :: stress_idx            !< Indexes of elastic shear stress eqns.
     type(int_bounds_info) :: xi_idx                !< Indexes of first and last reference map eqns.
     integer :: c_idx                               !< Index of the color function
+    integer :: c2_idx                              !< Index of the secondary color function
     type(int_bounds_info) :: species_idx           !< Indexes of first & last concentration eqns.
     integer :: damage_idx                          !< Index of damage state variable (D) for continuum damage model
 
@@ -263,6 +264,7 @@ module m_global_parameters
     !> @name Surface Tension Modeling
     !> @{
     real(wp) :: sigma
+    real(wp) :: sigma_2
     logical :: surface_tension
     !> @}
 
@@ -525,6 +527,7 @@ contains
 
         ! surface tension modeling
         sigma = dflt_real
+        sigma_2 = dflt_real
         pi_fac = 1._wp
 
         ! Immersed Boundaries
@@ -777,6 +780,98 @@ contains
             internalEnergies_idx%end = adv_idx%end + num_fluids
             sys_size = internalEnergies_idx%end
 
+            if (bubbles_euler) then
+                alf_idx = adv_idx%end
+            else
+                alf_idx = 1
+            end if
+
+            if (bubbles_euler) then
+                bub_idx%beg = sys_size + 1
+                if (qbmm) then
+                    if (nnode == 4) then
+                        nmom = 6 !! Already set as a parameter
+                    end if
+                    bub_idx%end = adv_idx%end + nb*nmom
+                else
+                    if (.not. polytropic) then
+                        bub_idx%end = sys_size + 4*nb
+                    else
+                        bub_idx%end = sys_size + 2*nb
+                    end if
+                end if
+                sys_size = bub_idx%end
+
+                if (adv_n) then
+                    n_idx = bub_idx%end + 1
+                    sys_size = n_idx
+                end if
+
+                allocate (weight(nb), R0(nb))
+                allocate (bub_idx%rs(nb), bub_idx%vs(nb))
+                allocate (bub_idx%ps(nb), bub_idx%ms(nb))
+
+                if (qbmm) then
+                    allocate (bub_idx%moms(nb, nmom))
+                    allocate (bub_idx%fullmom(nb, 0:nmom, 0:nmom))
+
+                    do i = 1, nb
+                        do j = 1, nmom
+                            bub_idx%moms(i, j) = bub_idx%beg + (j - 1) + (i - 1)*nmom
+                        end do
+                        bub_idx%fullmom(i, 0, 0) = bub_idx%moms(i, 1)
+                        bub_idx%fullmom(i, 1, 0) = bub_idx%moms(i, 2)
+                        bub_idx%fullmom(i, 0, 1) = bub_idx%moms(i, 3)
+                        bub_idx%fullmom(i, 2, 0) = bub_idx%moms(i, 4)
+                        bub_idx%fullmom(i, 1, 1) = bub_idx%moms(i, 5)
+                        bub_idx%fullmom(i, 0, 2) = bub_idx%moms(i, 6)
+                        bub_idx%rs(i) = bub_idx%fullmom(i, 1, 0)
+                    end do
+                else
+                    do i = 1, nb
+                        if (.not. polytropic) then
+                            fac = 4
+                        else
+                            fac = 2
+                        end if
+
+                        bub_idx%rs(i) = bub_idx%beg + (i - 1)*fac
+                        bub_idx%vs(i) = bub_idx%rs(i) + 1
+
+                        if (.not. polytropic) then
+                            bub_idx%ps(i) = bub_idx%vs(i) + 1
+                            bub_idx%ms(i) = bub_idx%ps(i) + 1
+                        end if
+                    end do
+                end if
+
+                if (nb == 1) then
+                    weight(:) = 1._wp
+                    R0(:) = 1._wp
+                else if (nb < 1) then
+                    stop 'Invalid value of nb'
+                end if
+
+                if (.not. qbmm) then
+                    if (polytropic) then
+                        rhoref = 1._wp
+                        pref = 1._wp
+                    end if
+                end if
+
+                if (qbmm) then
+                    if (polytropic) then
+                        allocate (pb0(nb))
+                        if ((f_is_default(Web))) then
+                            pb0 = pref
+                            pb0 = pb0/pref
+                            pref = 1._wp
+                        end if
+                        rhoref = 1._wp
+                    end if
+                end if
+            end if
+
         else if (model_eqns == 4) then
             ! 4 equation model with subgrid bubbles_euler
             cont_idx%beg = 1 ! one continuity equation
@@ -877,6 +972,16 @@ contains
             if (surface_tension) then
                 c_idx = sys_size + 1
                 sys_size = c_idx
+
+                if (num_fluids > 2) then
+                    c2_idx = sys_size + 1
+                    sys_size = c2_idx
+                else
+                    c2_idx = 0
+                end if
+            else
+                c_idx = 0
+                c2_idx = 0
             end if
 
             if (cont_damage) then

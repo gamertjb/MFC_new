@@ -243,6 +243,13 @@ contains
                 q_cons_qp%vf(c_idx)%sf
             $:GPU_ENTER_DATA(copyin='[q_prim_qp%vf(c_idx)%sf]')
             $:GPU_ENTER_DATA(attach='[q_prim_qp%vf(c_idx)%sf]')
+
+            if (c2_idx > 0) then
+                q_prim_qp%vf(c2_idx)%sf => &
+                    q_cons_qp%vf(c2_idx)%sf
+                $:GPU_ENTER_DATA(copyin='[q_prim_qp%vf(c2_idx)%sf]')
+                $:GPU_ENTER_DATA(attach='[q_prim_qp%vf(c2_idx)%sf]')
+            end if
         end if
 
         ! Allocation/Association of flux_n, flux_src_n, and flux_gsrc_n
@@ -1059,9 +1066,12 @@ contains
             if (.not. igr) then
                 #:call GPU_PARALLEL_LOOP(collapse=4)
                     do i = 1, sys_size
-                        do l = idwbuff(3)%beg, idwbuff(3)%end
-                            do k = idwbuff(2)%beg, idwbuff(2)%end
-                                do j = idwbuff(1)%beg, idwbuff(1)%end
+                        do l = max(idwint(3)%beg, lbound(q_prim_vf(i)%sf, 3), lbound(q_prim_qp%vf(i)%sf, 3)), &
+                               min(idwint(3)%end, ubound(q_prim_vf(i)%sf, 3), ubound(q_prim_qp%vf(i)%sf, 3))
+                            do k = max(idwint(2)%beg, lbound(q_prim_vf(i)%sf, 2), lbound(q_prim_qp%vf(i)%sf, 2)), &
+                                   min(idwint(2)%end, ubound(q_prim_vf(i)%sf, 2), ubound(q_prim_qp%vf(i)%sf, 2))
+                                do j = max(idwint(1)%beg, lbound(q_prim_vf(i)%sf, 1), lbound(q_prim_qp%vf(i)%sf, 1)), &
+                                       min(idwint(1)%end, ubound(q_prim_vf(i)%sf, 1), ubound(q_prim_qp%vf(i)%sf, 1))
                                     q_prim_vf(i)%sf(j, k, l) = q_prim_qp%vf(i)%sf(j, k, l)
                                 end do
                             end do
