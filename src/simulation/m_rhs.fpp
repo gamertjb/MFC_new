@@ -1066,9 +1066,12 @@ contains
             if (.not. igr) then
                 #:call GPU_PARALLEL_LOOP(collapse=4)
                     do i = 1, sys_size
-                        do l = max(idwint(3)%beg, lbound(q_prim_vf(i)%sf, 3)), min(idwint(3)%end, ubound(q_prim_vf(i)%sf, 3))
-                            do k = max(idwint(2)%beg, lbound(q_prim_vf(i)%sf, 2)), min(idwint(2)%end, ubound(q_prim_vf(i)%sf, 2))
-                                do j = max(idwint(1)%beg, lbound(q_prim_vf(i)%sf, 1)), min(idwint(1)%end, ubound(q_prim_vf(i)%sf, 1))
+                        do l = max(idwint(3)%beg, lbound(q_prim_vf(i)%sf, 3), lbound(q_prim_qp%vf(i)%sf, 3)), &
+                               min(idwint(3)%end, ubound(q_prim_vf(i)%sf, 3), ubound(q_prim_qp%vf(i)%sf, 3))
+                            do k = max(idwint(2)%beg, lbound(q_prim_vf(i)%sf, 2), lbound(q_prim_qp%vf(i)%sf, 2)), &
+                                   min(idwint(2)%end, ubound(q_prim_vf(i)%sf, 2), ubound(q_prim_qp%vf(i)%sf, 2))
+                                do j = max(idwint(1)%beg, lbound(q_prim_vf(i)%sf, 1), lbound(q_prim_qp%vf(i)%sf, 1)), &
+                                       min(idwint(1)%end, ubound(q_prim_vf(i)%sf, 1), ubound(q_prim_qp%vf(i)%sf, 1))
                                     q_prim_vf(i)%sf(j, k, l) = q_prim_qp%vf(i)%sf(j, k, l)
                                 end do
                             end do

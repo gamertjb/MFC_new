@@ -1359,7 +1359,7 @@ contains
                             nbub = 3._wp*q_prim_vf(alf_idx)%sf(j, k, l)/(4._wp*pi*R3tmp)
                         end if
 
-                        nbub = max(nbub, sgm_eps)
+                        nbub = max(abs(nbub), sgm_eps)
 
                         if (j == 0 .and. k == 0 .and. l == 0) print *, 'In convert, nbub:', nbub
 
