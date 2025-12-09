@@ -1052,7 +1052,7 @@ contains
                                 nRtmp(i) = qK_cons_vf(bubrs_vc(i))%sf(j, k, l)
                             end do
 
-                            vftmp = qK_cons_vf(alf_idx)%sf(j, k, l)
+                              vftmp = max(qK_cons_vf(alf_idx)%sf(j, k, l), sgm_eps)
 
                             if (qbmm) then
                                 !Get nb (constant across all R0 bins)
