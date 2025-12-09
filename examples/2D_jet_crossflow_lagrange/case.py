@@ -1,141 +1,124 @@
 #!/usr/bin/env python3
-"""Lagrangian vapor bubble carried by a liquid jet into a subsonic crossflow."""
+"""Jet-in-crossflow case with a Lagrangian vapor bubble and three-fluid surface tension.
+
+The setup follows the scaling used in the reference snippet provided by the user: the
+CFL number is fixed from the acoustic speed in the air free-stream, the grid spacing is
+based on the physical jet diameter, and outputs are scheduled by time step counts.
+"""
 
 import json
 import math
 
 # -----------------------------------------------------------------------------
-# Reference scales
+# Baseline thermodynamic and flow parameters (physical units)
 # -----------------------------------------------------------------------------
-djet = 2.5e-4  # m
-x0 = djet
-rho0 = 660.0  # kg/m^3 (liquid reference density)
-c0 = 1200.0  # m/s (liquid reference sound speed)
-p0 = rho0 * c0 * c0
-T0 = 300.0  # K
+pA = 140000.0
+rhoA = 1.76
+gam_air = 1.4
+c1 = math.sqrt(gam_air * pA / rhoA)
 
-# -----------------------------------------------------------------------------
-# Fluid properties
-# -----------------------------------------------------------------------------
-rho_liq = rho0
-rho_vap = 2.5
-rho_air = 1.2
+pW = pA
+velJ = 37.9  # jet velocity (y-direction)
+velA = 0.3 * c1  # crossflow velocity (x-direction)
+rhoW = 1000.0
+rho_vapor = 0.6
+muA = 1.85e-5
+muJ = 1.0016e-3
+mu_vapor = 1.2e-5
 
-gamma_liq = 4.0
-pi_inf_liq = 1.65e8
-mu_liq = 0.30e-3
+# Dense vapor void fraction injected with the jet
+vapor_frac = 0.4
 
-sigma_liq = 0.018  # N/m, used by the Lagrangian microphysics
-pv_liq = 2500.0  # Pa
-
-gamma_air = 1.4
-mu_air = 1.8e-5
-
-gamma_vap = 1.09
-pi_inf_vap = 0.0
-mu_vap = 1.5e-5
-
-# Gas/vapor transport properties for the Lagrangian model
-cp_g = 1.0e3
-cp_v = 2.1e3
-k_g = 0.025
-k_v = 0.02
-MW_g = 28.0
-MW_v = 18.0
-
-diff_vapor = 2.5e-5
+# Reference Eulerian bubble parameters
+R0ref = 10.0e-6
+pv = 2300.0
+Ca = (pW - pv) / (rhoW * velJ**2)
+We = rhoW * velJ**2 * R0ref / 0.0794
+Re_inv = muJ / (rhoW * velJ * R0ref)
 
 # -----------------------------------------------------------------------------
-# Flow configuration
+# Grid / time setup
 # -----------------------------------------------------------------------------
-u_cross = 60.0  # m/s subsonic crossflow velocity (x-direction)
-u_jet = 80.0  # m/s jet injection speed (y-direction)
+djet = 50e-6
+x_domain_beg = -10 * djet
+x_domain_end = 50 * djet
+y_domain_beg = 0.0
+y_domain_end = 26.25 * djet
+x_length = x_domain_end - x_domain_beg
+y_length = y_domain_end - y_domain_beg
+Ny = int(1778 / 2)
+Nx = int(7112 / 2)
+dx = x_length / Nx
 
-x_beg = -6.0 * djet
-x_end = 18.0 * djet
-y_beg = 0.0
-y_end = 15.0 * djet
+time_end = 3.0e-6
+cfl = 0.1
 
-Lx = x_end - x_beg
-Ly = y_end - y_beg
+dt = cfl * dx / c1
+Nt = int(math.ceil(time_end / dt))
 
-# -----------------------------------------------------------------------------
-# Grid resolution and time stepping
-# -----------------------------------------------------------------------------
-dx_target = 0.08 * djet
-Nx = max(1, int(round(Lx / dx_target)))
-Ny = max(1, int(round(Ly / dx_target)))
+# ensure at least one time step
+if Nt < 1:
+    Nt = 1
 
-dx = Lx / Nx
+# frequency for data output in terms of number of time steps (target ~50 outputs)
+save_interval = max(Nt // 50, 1)
 
-cfl = 0.5
-# nondimensionalize dt using x0/c0 scaling
-dt = cfl * (dx / c0) * (c0 / x0)
+# Regularisation
+eps = 1.0e-6
 
-# end time and output cadence (nondimensional)
-t_stop = 3.0e-6 * c0 / x0  # 3 microseconds of physical time
-t_save = t_stop / 50.0
-
-# -----------------------------------------------------------------------------
-# Geometry helpers
-# -----------------------------------------------------------------------------
-jet_length_x = djet
-jet_length_y = 4.0 * djet
-jet_center_x = 0.0
-jet_center_y = y_beg + 0.5 * jet_length_y
-
-bubble_entry_x = jet_center_x / x0
-bubble_entry_y = (jet_center_y + 0.25 * jet_length_y) / x0
-bubble_radius = 0.10  # fraction of jet diameter (already nondimensional)
-
-# -----------------------------------------------------------------------------
-# Patch volume fractions (nondimensionalized by rho0)
-# -----------------------------------------------------------------------------
-_eps = 1.0e-6
-alpha_liq_cross = _eps
-alpha_vap_cross = _eps
-alpha_air_cross = 1.0 - 2.0 * _eps
-
-alpha_liq_jet = 1.0 - 2.0 * _eps
-alpha_vap_jet = _eps
-alpha_air_jet = _eps
+jet_patch_length_x = 40 * dx
+jet_patch_xc = x_domain_beg + 0.5 * jet_patch_length_x
+jet_patch_yc = y_domain_beg + 0.5 * djet
 
 print(
     json.dumps(
         {
             # Logistics -------------------------------------------------------
             "run_time_info": "T",
-            "x_domain%beg": x_beg / x0,
-            "x_domain%end": x_end / x0,
-            "y_domain%beg": y_beg / x0,
-            "y_domain%end": y_end / x0,
-            "m": Nx,
-            "n": Ny,
+            "x_domain%beg": x_domain_beg,
+            "x_domain%end": x_domain_end,
+            "y_domain%beg": y_domain_beg,
+            "y_domain%end": y_domain_end,
+            "m": int(Nx),
+            "n": int(Ny),
             "p": 0,
             "dt": dt,
-            "cfl_adap_dt": "T",
-            "cfl_target": cfl,
-            "n_start": 0,
-            "t_stop": t_stop,
-            "t_save": t_save,
-            # Numerics --------------------------------------------------------
+            "t_step_start": 0,
+            "t_step_stop": int(Nt),
+            "t_step_save": int(save_interval),
+            # Simulation algorithm parameters --------------------------------
             "num_patches": 2,
-            "model_eqns": 3,
-            "num_fluids": 3,
+            "model_eqns": 2,
             "alt_soundspeed": "F",
-            "mpp_lim": "T",
+            "num_fluids": 3,
+            "mpp_lim": "F",
+            "mixture_err": "T",
+            "bubbles_euler": "T",
+            "bubble_model": 2,
+            "polytropic": "T",
+            "polydisperse": "F",
+            "R0_type": 1,
+            "thermal": 3,
+            "R0ref": R0ref,
+            "nb": 1,
+            "Ca": Ca,
+            "Web": We,
+            "Re_inv": Re_inv,
+            "time_stepper": 2,
+            "weno_order": 3,
+            "weno_eps": 1.0e-16,
+            "weno_Re_flux": "F",
+            "mapped_weno": "T",
+            "weno_avg": "F",
+            "null_weights": "F",
+            "mp_weno": "F",
             "riemann_solver": 2,
             "wave_speeds": 1,
             "avg_state": 2,
-            "viscous": "T",
             "surface_tension": "T",
-            "weno_order": 5,
-            "weno_eps": 1.0e-16,
-            "mapped_weno": "T",
-            "weno_Re_flux": "T",
-            "weno_avg": "T",
-            "null_weights": "T",
-            "mp_weno": "F",
+            "viscous": "F",
+            "elliptic_smoothing": "T",
+            "elliptic_smoothing_iters": 50,
             # Boundary conditions ---------------------------------------------
             "bc_x%beg": -16,
             "bc_x%end": -3,
@@ -146,103 +129,71 @@ print(
             "patch_bc(1)%loc": -1,
             "patch_bc(1)%geometry": 1,
             "patch_bc(1)%type": -17,
-            "patch_bc(1)%centroid(1)": jet_center_x / x0,
-            "patch_bc(1)%length(1)": jet_length_x / x0,
-            "bc_x%vb1": u_cross / c0,
-            "bc_x%vb2": 0.0,
-            # Output ----------------------------------------------------------
+            "patch_bc(1)%centroid(1)": 0.0,
+            "patch_bc(1)%length(1)": djet,
+            # Formatted Database File Structures
             "format": 1,
             "precision": 2,
             "prim_vars_wrt": "T",
-            "parallel_io": "T",
+            "cf_wrt": "T",
             "lag_db_wrt": "T",
-            # Patch 1: crossflow (mostly air) ---------------------------------
+            "parallel_io": "T",
+            # Inflow boundary condition
+            "bc_x%vb1": velA,
+            "bc_x%vb2": 0.0,
+            "bc_x%vb3": 0.0,
+            # Patch 1: Initial crossflow (air-dominated)
             "patch_icpp(1)%geometry": 3,
-            "patch_icpp(1)%x_centroid": 0.5 * (x_beg + x_end) / x0,
-            "patch_icpp(1)%y_centroid": 0.5 * (y_beg + y_end) / x0,
-            "patch_icpp(1)%length_x": (x_end - x_beg) * 10.0 / x0,
-            "patch_icpp(1)%length_y": (y_end - y_beg) * 10.0 / x0,
-            "patch_icpp(1)%vel(1)": u_cross / c0,
+            "patch_icpp(1)%x_centroid": x_domain_beg + 0.5 * x_length,
+            "patch_icpp(1)%y_centroid": y_domain_beg + 0.5 * y_length,
+            "patch_icpp(1)%length_x": x_length,
+            "patch_icpp(1)%length_y": y_length,
+            "patch_icpp(1)%vel(1)": velA,
             "patch_icpp(1)%vel(2)": 0.0,
-            "patch_icpp(1)%pres": 101325.0 / p0,
-            "patch_icpp(1)%alpha_rho(1)": alpha_liq_cross * rho_liq / rho0,
-            "patch_icpp(1)%alpha_rho(2)": alpha_vap_cross * rho_vap / rho0,
-            "patch_icpp(1)%alpha_rho(3)": alpha_air_cross * rho_air / rho0,
-            "patch_icpp(1)%alpha(1)": alpha_liq_cross,
-            "patch_icpp(1)%alpha(2)": alpha_vap_cross,
-            "patch_icpp(1)%alpha(3)": alpha_air_cross,
+            "patch_icpp(1)%pres": pA,
+            "patch_icpp(1)%alpha_rho(1)": eps * rhoW,
+            "patch_icpp(1)%alpha(1)": eps,
             "patch_icpp(1)%cf_val": 0,
             "patch_icpp(1)%cf_val2": 0,
-            # Patch 2: liquid jet carrying the seeded bubble ------------------
+            "patch_icpp(1)%alpha_rho(2)": eps * rhoW,
+            "patch_icpp(1)%alpha(2)": eps,
+            "patch_icpp(1)%alpha_rho(3)": (1.0 - 2.0 * eps) * rhoA,
+            "patch_icpp(1)%alpha(3)": 1.0 - 2.0 * eps,
+            "patch_icpp(1)%r0": 1.0,
+            "patch_icpp(1)%v0": 0.0,
+            # Patch 2: Jet seeded with dense vapor bubbles
             "patch_icpp(2)%geometry": 3,
             "patch_icpp(2)%alter_patch(1)": "T",
-            "patch_icpp(2)%x_centroid": jet_center_x / x0,
-            "patch_icpp(2)%y_centroid": jet_center_y / x0,
-            "patch_icpp(2)%length_x": jet_length_x / x0,
-            "patch_icpp(2)%length_y": jet_length_y / x0,
+            "patch_icpp(2)%x_centroid": jet_patch_xc,
+            "patch_icpp(2)%y_centroid": jet_patch_yc,
+            "patch_icpp(2)%length_x": jet_patch_length_x,
+            "patch_icpp(2)%length_y": djet,
             "patch_icpp(2)%vel(1)": 0.0,
-            "patch_icpp(2)%vel(2)": u_jet / c0,
-            "patch_icpp(2)%pres": 101325.0 / p0,
-            "patch_icpp(2)%alpha_rho(1)": alpha_liq_jet * rho_liq / rho0,
-            "patch_icpp(2)%alpha_rho(2)": alpha_vap_jet * rho_vap / rho0,
-            "patch_icpp(2)%alpha_rho(3)": alpha_air_jet * rho_air / rho0,
-            "patch_icpp(2)%alpha(1)": alpha_liq_jet,
-            "patch_icpp(2)%alpha(2)": alpha_vap_jet,
-            "patch_icpp(2)%alpha(3)": alpha_air_jet,
+            "patch_icpp(2)%vel(2)": velJ,
+            "patch_icpp(2)%pres": pW,
+            "patch_icpp(2)%alpha_rho(1)": eps * rhoA,
+            "patch_icpp(2)%alpha(1)": eps,
+            "patch_icpp(2)%alpha_rho(2)": (1.0 - vapor_frac - eps) * rhoW,
+            "patch_icpp(2)%alpha(2)": 1.0 - vapor_frac - eps,
+            "patch_icpp(2)%alpha_rho(3)": vapor_frac * rho_vapor,
+            "patch_icpp(2)%alpha(3)": vapor_frac,
             "patch_icpp(2)%cf_val": 1,
             "patch_icpp(2)%cf_val2": 1,
-            # Lagrangian Bubbles ----------------------------------------------
-            "bubbles_lagrange": "T",
-            "bubble_model": 2,
-            "lag_params%nBubs_glb": 1,
-            "lag_params%solver_approach": 2,
-            "lag_params%cluster_type": 2,
-            "lag_params%pressure_corrector": "T",
-            "lag_params%smooth_type": 1,
-            "lag_params%heatTransfer_model": "T",
-            "lag_params%massTransfer_model": "T",
-            "lag_params%epsilonb": 1.0,
-            "lag_params%valmaxvoid": 0.9,
-            "lag_params%write_bubbles": "F",
-            "lag_params%write_bubbles_stats": "F",
-            "lag_params%c0": c0,
-            "lag_params%rho0": rho0,
-            "lag_params%T0": T0,
-            "lag_params%x0": x0,
-            "lag_params%diffcoefvap": diff_vapor,
-            "lag_params%Thost": T0,
-            "lag_params%charwidth": 1.0,
-            # Fluids Physical Parameters --------------------------------------
-            # Liquid jet (host medium)
-            "fluid_pp(1)%gamma": 1.0 / (gamma_liq - 1.0),
-            "fluid_pp(1)%pi_inf": gamma_liq * (pi_inf_liq / p0) / (gamma_liq - 1.0),
-            "fluid_pp(1)%Re(1)": 1.0 / (mu_liq / (rho0 * c0 * x0)),
-            "fluid_pp(1)%mul0": mu_liq,
-            "fluid_pp(1)%ss": sigma_liq,
-            "fluid_pp(1)%pv": pv_liq,
-            "fluid_pp(1)%gamma_v": gamma_liq,
-            "fluid_pp(1)%M_v": MW_v,
-            "fluid_pp(1)%k_v": k_v,
-            "fluid_pp(1)%cp_v": cp_v,
-            # Vapor properties for three-fluid surface tension
-            "fluid_pp(2)%gamma": 1.0 / (gamma_vap - 1.0),
-            "fluid_pp(2)%pi_inf": pi_inf_vap,
-            "fluid_pp(2)%Re(1)": 1.0 / (mu_vap / (rho0 * c0 * x0)),
-            "fluid_pp(2)%gamma_v": gamma_vap,
-            "fluid_pp(2)%M_v": MW_v,
-            "fluid_pp(2)%k_v": k_v,
-            "fluid_pp(2)%cp_v": cp_v,
-            # Air crossflow / bubble gas state
-            "fluid_pp(3)%gamma": 1.0 / (gamma_air - 1.0),
+            "patch_icpp(2)%r0": 1.0,
+            "patch_icpp(2)%v0": 0.0,
+            # Fluid properties
+            "fluid_pp(1)%gamma": 1.0 / (gam_air - 1.0),
+            "fluid_pp(1)%pi_inf": 0.0,
+            "fluid_pp(1)%Re(1)": 1 / muA,
+            "fluid_pp(2)%gamma": 1.0 / (6.3 - 1.0),
+            "fluid_pp(2)%pi_inf": 3.43e8,
+            "fluid_pp(2)%Re(1)": 1 / muJ,
+            "fluid_pp(3)%gamma": 1.0 / (1.33 - 1.0),
             "fluid_pp(3)%pi_inf": 0.0,
-            "fluid_pp(3)%Re(1)": 1.0 / (mu_air / (rho0 * c0 * x0)),
-            "fluid_pp(3)%gamma_v": gamma_air,
-            "fluid_pp(3)%M_v": MW_g,
-            "fluid_pp(3)%k_v": k_g,
-            "fluid_pp(3)%cp_v": cp_g,
-            # Surface tension coefficients for interfaces 1-2 and 1-3
-            "sigma": sigma_liq,
-            "sigma_2": sigma_liq,
+            "fluid_pp(3)%Re(1)": 1 / mu_vapor,
+            # Surface tension --------------------------------------------------
+            "sigma": 0.0794,
+            "sigma_2": 0.0794,
         }
     )
 )
