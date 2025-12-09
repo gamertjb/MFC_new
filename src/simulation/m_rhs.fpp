@@ -243,6 +243,13 @@ contains
                 q_cons_qp%vf(c_idx)%sf
             $:GPU_ENTER_DATA(copyin='[q_prim_qp%vf(c_idx)%sf]')
             $:GPU_ENTER_DATA(attach='[q_prim_qp%vf(c_idx)%sf]')
+
+            if (c2_idx > 0) then
+                q_prim_qp%vf(c2_idx)%sf => &
+                    q_cons_qp%vf(c2_idx)%sf
+                $:GPU_ENTER_DATA(copyin='[q_prim_qp%vf(c2_idx)%sf]')
+                $:GPU_ENTER_DATA(attach='[q_prim_qp%vf(c2_idx)%sf]')
+            end if
         end if
 
         ! Allocation/Association of flux_n, flux_src_n, and flux_gsrc_n

@@ -414,6 +414,14 @@ function(MFC_SETUP_TARGET)
     cmake_parse_arguments(ARGS "OpenACC;MPI;SILO;HDF5;FFTW;LAPACK;OpenMP" "TARGET" "SOURCES" ${ARGN})
 
     add_executable(${ARGS_TARGET} ${ARGS_SOURCES})
+    # Ensure installed executables can locate bundled dependency libraries
+    # (FFTW, HDF5, SILO, LAPACK, etc.) without requiring system-wide
+    # installations. Using $ORIGIN keeps the rpath relative to the
+    # installed binary location.
+    set_target_properties(${ARGS_TARGET} PROPERTIES
+        BUILD_WITH_INSTALL_RPATH ON
+        INSTALL_RPATH           "$ORIGIN/../lib"
+        INSTALL_RPATH_USE_LINK_PATH ON)
     set(IPO_TARGETS ${ARGS_TARGET})
     # Here we need to split into "library" and "executable" to perform IPO on the NVIDIA compiler.
     # A little hacky, but it *is* an edge-case for *one* compiler.
