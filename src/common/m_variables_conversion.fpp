@@ -1130,6 +1130,7 @@ contains
 
                         if (surface_tension) then
                             qK_prim_vf(c_idx)%sf(j, k, l) = qK_cons_vf(c_idx)%sf(j, k, l)
+                            if (c2_idx > 0) qK_prim_vf(c2_idx)%sf(j, k, l) = qK_cons_vf(c2_idx)%sf(j, k, l)
                         end if
 
                         if (cont_damage) qK_prim_vf(damage_idx)%sf(j, k, l) = qK_cons_vf(damage_idx)%sf(j, k, l)
@@ -1403,6 +1404,7 @@ contains
 
                     if (surface_tension) then
                         q_cons_vf(c_idx)%sf(j, k, l) = q_prim_vf(c_idx)%sf(j, k, l)
+                        if (c2_idx > 0) q_cons_vf(c2_idx)%sf(j, k, l) = q_prim_vf(c2_idx)%sf(j, k, l)
                     end if
 
                     if (cont_damage) q_cons_vf(damage_idx)%sf(j, k, l) = q_prim_vf(damage_idx)%sf(j, k, l)
@@ -1614,6 +1616,7 @@ contains
         real(wp), intent(out) :: c
 
         real(wp) :: blkmod1, blkmod2
+        real(wp) :: rho_safe, pres_safe
 
         integer :: q
 
@@ -1627,38 +1630,45 @@ contains
             ! Only supports perfect gas for now
             c = sqrt((1._wp + 1._wp/gamma)*pres/rho/H)
         else
+            rho_safe = max(rho, sgm_eps)
+            pres_safe = max(pres, 0._wp)
+
             if (alt_soundspeed) then
                 blkmod1 = ((gammas(1) + 1._wp)*pres + &
                            pi_infs(1))/gammas(1)
                 blkmod2 = ((gammas(2) + 1._wp)*pres + &
                            pi_infs(2))/gammas(2)
-                c = (1._wp/(rho*(adv(1)/blkmod1 + adv(2)/blkmod2)))
+                c = (1._wp/(rho_safe*(adv(1)/blkmod1 + adv(2)/blkmod2)))
             elseif (model_eqns == 3) then
                 c = 0._wp
                 $:GPU_LOOP(parallelism='[seq]')
                 do q = 1, num_fluids
                     c = c + adv(q)*(1._wp/gammas(q) + 1._wp)* &
-                        (pres + pi_infs(q)/(gammas(q) + 1._wp))
+                        (pres_safe + pi_infs(q)/(gammas(q) + 1._wp))
                 end do
-                c = c/rho
+                c = c/rho_safe
             elseif (((model_eqns == 4) .or. (model_eqns == 2 .and. bubbles_euler))) then
                 ! Sound speed for bubble mmixture to order O(\alpha)
 
                 if (mpp_lim .and. (num_fluids > 1)) then
                     c = (1._wp/gamma + 1._wp)* &
-                        (pres + pi_inf/(gamma + 1._wp))/rho
+                        (pres_safe + pi_inf/(gamma + 1._wp))/rho_safe
                 else
                     c = &
                         (1._wp/gamma + 1._wp)* &
-                        (pres + pi_inf/(gamma + 1._wp))/ &
-                        (rho*(1._wp - adv(num_fluids)))
+                        (pres_safe + pi_inf/(gamma + 1._wp))/ &
+                        (rho_safe*(1._wp - adv(num_fluids)))
                 end if
             else
                 c = ((H - 5.e-1*vel_sum)/gamma)
             end if
 
-            if (mixture_err .and. c < 0._wp) then
+            if (.not. (c == c)) then
                 c = 100._wp*sgm_eps
+            else if (mixture_err .and. c < 0._wp) then
+                c = 100._wp*sgm_eps
+            else if (c < 0._wp) then
+                c = 0._wp
             else
                 c = sqrt(c)
             end if
