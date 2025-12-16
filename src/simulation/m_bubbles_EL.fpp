@@ -157,8 +157,20 @@ contains
         integer :: id_bubbles, id_host
         real(wp) :: rho0, c0, T0, x0, p0
 
-        id_bubbles = num_fluids
-        id_host = num_fluids - 1
+        !
+        ! NOTE: The Lagrangian model assumes a liquid host surrounding a gas
+        ! bubble.  The ordering in the equation set follows the documentation,
+        ! which prescribes component 1 as the liquid and component 2 as the gas.
+        ! When more than two Eulerian fluids are present (e.g., an additional
+        ! vapor component), we still bind the Lagrangian model to the primary
+        ! liquid (1) and gas (2) entries so that surface tension, vapor pressure
+        ! and transport properties are taken from the intended phases instead of
+        ! any auxiliary species.
+        !
+        if (num_fluids < 2) call s_mpi_abort('Lagrange bubbles require at least a liquid and a gas phase')
+
+        id_host = 1
+        id_bubbles = 2
 
         !Reference values
         rho0 = lag_params%rho0
