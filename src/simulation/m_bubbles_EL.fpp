@@ -352,6 +352,12 @@ contains
         if (pliq < 0) print *, "Negative pressure", proc_rank, &
             q_cons_vf(E_idx)%sf(cell(1), cell(2), cell(3)), pi_inf, gamma, pliq, cell, dynP
 
+        ! Ensure the initial liquid pressure used for the bubble model is
+        ! non-negative so that the derived initial gas mass remains physical.
+        if (pliq <= 0._wp) then
+            pliq = max(max(pv, 0._wp), epsilon(pliq))
+        end if
+
         ! Initial particle pressure
         gas_p(bub_id, 1) = pliq + 2._wp*(1._wp/Web)/bub_R0(bub_id)
         if (.not. f_approx_equal((1._wp/Web), 0._wp)) then
@@ -366,7 +372,10 @@ contains
         gas_mv(bub_id, 1) = pv*volparticle*(1._wp/(R_v*Tw))*(massflag) ! vapermass
         gas_mg(bub_id) = (gas_p(bub_id, 1) - pv*(massflag))*volparticle*(1._wp/(R_n*Tw)) ! gasmass
         if (gas_mg(bub_id) <= 0._wp) then
-            call s_mpi_abort("The initial mass of gas inside the bubble is negative. Check the initial conditions.")
+            gas_mg(bub_id) = epsilon(gas_mg(bub_id))
+            if (proc_rank == 0) then
+                print *, "Adjusted negative initial gas mass for bubble", lag_id(bub_id, 1)
+            end if
         end if
         totalmass = gas_mg(bub_id) + gas_mv(bub_id, 1) ! totalmass
 
