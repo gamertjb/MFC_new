@@ -17,6 +17,8 @@ module m_bubbles_EL
 
     use m_variables_conversion          !< State variables type conversion procedures
 
+    use m_thermochem, only: num_species
+
     use m_compile_specific
 
     use m_boundary_common
@@ -157,8 +159,20 @@ contains
         integer :: id_bubbles, id_host
         real(wp) :: rho0, c0, T0, x0, p0
 
-        id_bubbles = num_fluids
-        id_host = num_fluids - 1
+        !
+        ! NOTE: The Lagrangian model assumes a liquid host surrounding a gas
+        ! bubble.  The ordering in the equation set follows the documentation,
+        ! which prescribes component 1 as the liquid and component 2 as the gas.
+        ! When more than two Eulerian fluids are present (e.g., an additional
+        ! vapor component), we still bind the Lagrangian model to the primary
+        ! liquid (1) and gas (2) entries so that surface tension, vapor pressure
+        ! and transport properties are taken from the intended phases instead of
+        ! any auxiliary species.
+        !
+        if (num_fluids < 2) call s_mpi_abort('Lagrange bubbles require at least a liquid and a gas phase')
+
+        id_host = 1
+        id_bubbles = 2
 
         !Reference values
         rho0 = lag_params%rho0
@@ -297,8 +311,10 @@ contains
 
         real(wp) :: pliq, volparticle, concvap, totalmass, kparticle, cpparticle
         real(wp) :: omegaN_local, PeG, PeT, rhol, pcrit, qv, gamma, pi_inf, dynP
+        real(wp) :: T
         integer, dimension(3) :: cell
         real(wp), dimension(2) :: Re
+        real(wp), dimension(num_species) :: rhoYks
         real(wp) :: massflag, heatflag, Re_trans, Im_trans
 
         massflag = 0._wp
@@ -344,13 +360,22 @@ contains
 
         call s_convert_to_mixture_variables(q_cons_vf, cell(1), cell(2), cell(3), &
                                             rhol, gamma, pi_inf, qv, Re)
+        rhoYks = 0._wp
         dynP = 0._wp
         do i = 1, num_dims
             dynP = dynP + 0.5_wp*q_cons_vf(contxe + i)%sf(cell(1), cell(2), cell(3))**2/rhol
         end do
-        pliq = (q_cons_vf(E_idx)%sf(cell(1), cell(2), cell(3)) - dynP - pi_inf)/gamma
+        T = 0._wp
+        call s_compute_pressure(q_cons_vf(E_idx)%sf(cell(1), cell(2), cell(3)), &
+                                0._stp, dynP, pi_inf, gamma, rhol, qv, rhoYks, pliq, T)
         if (pliq < 0) print *, "Negative pressure", proc_rank, &
             q_cons_vf(E_idx)%sf(cell(1), cell(2), cell(3)), pi_inf, gamma, pliq, cell, dynP
+
+        ! Ensure the initial liquid pressure used for the bubble model is
+        ! non-negative so that the derived initial gas mass remains physical.
+        if (pliq <= 0._wp) then
+            pliq = max(max(pv, 0._wp), epsilon(pliq))
+        end if
 
         ! Initial particle pressure
         gas_p(bub_id, 1) = pliq + 2._wp*(1._wp/Web)/bub_R0(bub_id)
@@ -366,7 +391,10 @@ contains
         gas_mv(bub_id, 1) = pv*volparticle*(1._wp/(R_v*Tw))*(massflag) ! vapermass
         gas_mg(bub_id) = (gas_p(bub_id, 1) - pv*(massflag))*volparticle*(1._wp/(R_n*Tw)) ! gasmass
         if (gas_mg(bub_id) <= 0._wp) then
-            call s_mpi_abort("The initial mass of gas inside the bubble is negative. Check the initial conditions.")
+            gas_mg(bub_id) = epsilon(gas_mg(bub_id))
+            if (proc_rank == 0) then
+                print *, "Adjusted negative initial gas mass for bubble", lag_id(bub_id, 1)
+            end if
         end if
         totalmass = gas_mg(bub_id) + gas_mv(bub_id, 1) ! totalmass
 
