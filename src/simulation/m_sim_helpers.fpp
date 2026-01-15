@@ -9,6 +9,8 @@ module m_sim_helpers
 
     use m_variables_conversion
 
+    use ieee_arithmetic
+
     implicit none
 
     private; public :: s_compute_enthalpy, &
@@ -204,6 +206,10 @@ contains
             icfl_sf(j, k, l) = (dt/dx(j))*(abs(vel(1)) + c)
         end if
 
+        if (.not. ieee_is_finite(icfl_sf(j, k, l))) then
+            icfl_sf(j, k, l) = 0._wp
+        end if
+
         ! Viscous calculations
         if (viscous) then
             if (p > 0) then
@@ -269,6 +275,10 @@ contains
             icfl_dt = cfl_target*(dx(j)/(abs(vel(1)) + c))
         end if
 
+        if (.not. ieee_is_finite(icfl_dt) .or. icfl_dt <= 0._wp) then
+            icfl_dt = dt
+        end if
+
         ! Viscous calculations
         if (viscous) then
             if (p > 0) then
@@ -287,6 +297,12 @@ contains
             else
                 !1D
                 vcfl_dt = cfl_target*(dx(j)**2._wp)/minval(1/(rho*Re_l))
+            end if
+        end if
+
+        if (viscous) then
+            if (.not. ieee_is_finite(vcfl_dt) .or. vcfl_dt <= 0._wp) then
+                vcfl_dt = dt
             end if
         end if
 
