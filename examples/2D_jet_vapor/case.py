@@ -70,16 +70,16 @@ Ny = max(1, int(round(Ly / dx_target)))
 dx = Lx / Nx  # actual realized spacing after rounding
 
 # Time stepping
-cfl = 0.95
-time_end = 3.0e-4
-dt = 5.0 * cfl * dx / c_air
+cfl = 0.2
+time_end = 1.0e-5
+dt = cfl * dx / c_air
 
 # Output cadence expressed in physical time so adaptive stepping still saves often
 num_output_frames = 100
 t_save = time_end / num_output_frames
 
 # Regularisation and surface tension
-_eps = 1.0e-6
+_eps = 1.0e-5
 sigma_hex_air = 0.018
 sigma_hex_vapor = 0.018
 
@@ -90,9 +90,12 @@ crossflow_length_x = x_end - x_beg
 crossflow_length_y = y_end - y_beg
 
 jet_length_x = djet
-jet_length_y = djet
+jet_length_y = 1.5 * djet
 jet_center_x = 0.0
 jet_center_y = y_beg + 0.5 * jet_length_y
+
+# Lagrangian bubble sizing (increase to make the initial bubble larger)
+bubble_charwidth = 2.0 * djet
 
 print(
     json.dumps(
@@ -160,6 +163,7 @@ print(
             "prim_vars_wrt": "T",
             "cf_wrt": "T",
             "parallel_io": "T",
+            "lag_params%charwidth": bubble_charwidth,
             # Patch 1: crossflow (mostly air) ---------------------------------
             "patch_icpp(1)%geometry": 3,
             "patch_icpp(1)%x_centroid": crossflow_center_x,
