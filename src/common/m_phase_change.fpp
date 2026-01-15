@@ -93,13 +93,14 @@ contains
         ! $:GPU_DECLARE(create='[rhoe,dynE,rhos,rho,rM,m1,m2,MCT,TvF]')
 
         real(wp), dimension(num_fluids) :: p_infOV, p_infpT, p_infSL, sk, hk, gk, ek, rhok
+        real(wp) :: ek_i, rhok_i
         ! $:GPU_DECLARE(create='[p_infOV,p_infpT,p_infSL,sk,hk,gk,ek,rhok]')
 
         !< Generic loop iterators
         integer :: i, j, k, l
 
         ! starting equilibrium solver
-        #:call GPU_PARALLEL_LOOP(collapse=3, private='[p_infOV, p_infpT, p_infSL, sk, hk, gk, ek, rhok,pS, pSOV, pSSL, TS, TSOV, TSatOV, TSatSL, TSSL, rhoe, dynE, rhos, rho, rM, m1, m2, MCT, TvF]')
+        #:call GPU_PARALLEL_LOOP(collapse=3, private='[p_infOV, p_infpT, p_infSL, sk, hk, gk, ek, rhok, ek_i, rhok_i, pS, pSOV, pSSL, TS, TSOV, TSatOV, TSatSL, TSSL, rhoe, dynE, rhos, rho, rM, m1, m2, MCT, TvF]')
             do j = 0, m
                 do k = 0, n
                     do l = 0, p
@@ -256,12 +257,21 @@ contains
                         $:GPU_LOOP(parallelism='[seq]')
                         do i = 1, num_fluids
 
+                            rhok_i = rhok(i)
+                            if (.not. ieee_is_finite(rhok_i) .or. rhok_i <= sgm_eps) then
+                                rhok_i = sgm_eps
+                            end if
+                            ek_i = ek(i)
+                            if (.not. ieee_is_finite(ek_i)) then
+                                ek_i = 0.0_wp
+                            end if
+
                             ! volume fractions
-                            q_cons_vf(i + advxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)/rhok(i)
+                            q_cons_vf(i + advxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)/rhok_i
 
                             ! alpha*rho*e
                             if (intxb > 0) then
-                                q_cons_vf(i + intxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)*ek(i)
+                                q_cons_vf(i + intxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)*ek_i
                             end if
 
                             ! Total entropy
