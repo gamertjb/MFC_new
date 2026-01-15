@@ -90,9 +90,12 @@ crossflow_length_x = x_end - x_beg
 crossflow_length_y = y_end - y_beg
 
 jet_length_x = djet
-jet_length_y = djet
+jet_length_y = 1.5 * djet
 jet_center_x = 0.0
 jet_center_y = y_beg + 0.5 * jet_length_y
+
+# Lagrangian bubble sizing (increase to make the initial bubble larger)
+bubble_charwidth = 2.0 * djet
 
 print(
     json.dumps(
@@ -160,6 +163,7 @@ print(
             "prim_vars_wrt": "T",
             "cf_wrt": "T",
             "parallel_io": "T",
+            "lag_params%charwidth": bubble_charwidth,
             # Patch 1: crossflow (mostly air) ---------------------------------
             "patch_icpp(1)%geometry": 3,
             "patch_icpp(1)%x_centroid": crossflow_center_x,
