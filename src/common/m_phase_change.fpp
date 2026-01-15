@@ -109,6 +109,13 @@ contains
                         do i = 1, num_fluids
 
                             ! Mixture density
+                            if (.not. ieee_is_finite(q_cons_vf(i + contxb - 1)%sf(j, k, l))) then
+                                q_cons_vf(i + contxb - 1)%sf(j, k, l) = 0.0_wp
+                            end if
+                            if (.not. ieee_is_finite(q_cons_vf(i + advxb - 1)%sf(j, k, l))) then
+                                q_cons_vf(i + advxb - 1)%sf(j, k, l) = 0.0_wp
+                            end if
+
                             rho = rho + q_cons_vf(i + contxb - 1)%sf(j, k, l)
 
                             ! Total Volume Fraction
