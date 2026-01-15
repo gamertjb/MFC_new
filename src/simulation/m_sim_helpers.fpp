@@ -200,6 +200,7 @@ contains
         real(wp) :: rho_safe
         real(wp), dimension(2) :: inv_Re_l
         real(wp) :: inv_Re_max
+        real(wp), parameter :: rho_floor = 1.0e3_wp*sgm_eps
 
         ! Inviscid CFL calculation
         if (p > 0 .or. n > 0) then
@@ -212,7 +213,12 @@ contains
 
         ! Viscous calculations
         if (viscous) then
-            rho_safe = max(rho, sgm_eps)
+            if (rho <= rho_floor) then
+                vcfl_sf(j, k, l) = 0._wp
+                Rc_sf(j, k, l) = 0._wp
+                return
+            end if
+            rho_safe = max(rho, rho_floor)
             inv_Re_l = 1._wp/max(Re_l, sgm_eps)
             inv_Re_max = maxval(inv_Re_l)
             if (p > 0) then
@@ -274,7 +280,10 @@ contains
 
         real(wp) :: icfl_dt, vcfl_dt
         real(wp) :: fltr_dtheta
+        real(wp) :: rho_safe
+        real(wp), dimension(2) :: inv_Re_l
         real(wp), parameter :: dt_min = 1.0e-9_wp
+        real(wp), parameter :: rho_floor = 1.0e3_wp*sgm_eps
 
         ! Inviscid CFL calculation
         if (p > 0 .or. n > 0) then
@@ -290,22 +299,24 @@ contains
 
         ! Viscous calculations
         if (viscous) then
+            rho_safe = max(rho, rho_floor)
+            inv_Re_l = 1._wp/max(Re_l, sgm_eps)
             if (p > 0) then
                 !3D
                 if (grid_geometry == 3) then
                     fltr_dtheta = f_compute_filtered_dtheta(k, l)
                     vcfl_dt = cfl_target*(min(dx(j), dy(k), fltr_dtheta)**2._wp) &
-                              /minval(1/(rho*Re_l))
+                              /minval(inv_Re_l/rho_safe)
                 else
                     vcfl_dt = cfl_target*(min(dx(j), dy(k), dz(l))**2._wp) &
-                              /minval(1/(rho*Re_l))
+                              /minval(inv_Re_l/rho_safe)
                 end if
             elseif (n > 0) then
                 !2D
-                vcfl_dt = cfl_target*(min(dx(j), dy(k))**2._wp)/maxval((1/Re_l)/rho)
+                vcfl_dt = cfl_target*(min(dx(j), dy(k))**2._wp)/maxval(inv_Re_l/rho_safe)
             else
                 !1D
-                vcfl_dt = cfl_target*(dx(j)**2._wp)/minval(1/(rho*Re_l))
+                vcfl_dt = cfl_target*(dx(j)**2._wp)/minval(inv_Re_l/rho_safe)
             end if
             if (.not. ieee_is_finite(vcfl_dt) .or. vcfl_dt <= 0._wp) then
                 vcfl_dt = dt_min
