@@ -70,16 +70,16 @@ Ny = max(1, int(round(Ly / dx_target)))
 dx = Lx / Nx  # actual realized spacing after rounding
 
 # Time stepping
-cfl = 0.95
-time_end = 3.0e-4
-dt = 5.0 * cfl * dx / c_air
+cfl = 0.2
+time_end = 1.0e-5
+dt = cfl * dx / c_air
 
 # Output cadence expressed in physical time so adaptive stepping still saves often
 num_output_frames = 100
 t_save = time_end / num_output_frames
 
 # Regularisation and surface tension
-_eps = 1.0e-6
+_eps = 1.0e-5
 sigma_hex_air = 0.018
 sigma_hex_vapor = 0.018
 
