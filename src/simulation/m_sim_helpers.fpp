@@ -9,6 +9,8 @@ module m_sim_helpers
 
     use m_variables_conversion
 
+    use ieee_arithmetic
+
     implicit none
 
     private; public :: s_compute_enthalpy, &
@@ -259,6 +261,7 @@ contains
 
         real(wp) :: icfl_dt, vcfl_dt
         real(wp) :: fltr_dtheta
+        real(wp), parameter :: dt_min = 1.0e-12_wp
 
         ! Inviscid CFL calculation
         if (p > 0 .or. n > 0) then
@@ -267,6 +270,9 @@ contains
         else
             ! 1D case
             icfl_dt = cfl_target*(dx(j)/(abs(vel(1)) + c))
+        end if
+        if (.not. ieee_is_finite(icfl_dt) .or. icfl_dt <= 0._wp) then
+            icfl_dt = dt_min
         end if
 
         ! Viscous calculations
@@ -287,6 +293,9 @@ contains
             else
                 !1D
                 vcfl_dt = cfl_target*(dx(j)**2._wp)/minval(1/(rho*Re_l))
+            end if
+            if (.not. ieee_is_finite(vcfl_dt) .or. vcfl_dt <= 0._wp) then
+                vcfl_dt = dt_min
             end if
         end if
 
