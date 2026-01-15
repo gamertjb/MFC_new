@@ -261,7 +261,7 @@ contains
 
         real(wp) :: icfl_dt, vcfl_dt
         real(wp) :: fltr_dtheta
-        real(wp), parameter :: dt_min = 1.0e-12_wp
+        real(wp), parameter :: dt_min = 1.0e-9_wp
 
         ! Inviscid CFL calculation
         if (p > 0 .or. n > 0) then
