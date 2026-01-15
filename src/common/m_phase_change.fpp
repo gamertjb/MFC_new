@@ -245,11 +245,18 @@ contains
                         ! densities
                         rhok(1:num_fluids) = (pS + ps_inf(1:num_fluids)) &
                                              /((gs_min(1:num_fluids) - 1)*cvs(1:num_fluids)*TS)
+                        where (.not. ieee_is_finite(rhok(1:num_fluids)))
+                            rhok(1:num_fluids) = sgm_eps
+                        end where
+                        rhok(1:num_fluids) = max(rhok(1:num_fluids), sgm_eps)
 
                         ! internal energy
                         ek(1:num_fluids) = (pS + gs_min(1:num_fluids) &
                                             *ps_inf(1:num_fluids))/(pS + ps_inf(1:num_fluids)) &
                                            *cvs(1:num_fluids)*TS + qvs(1:num_fluids)
+                        where (.not. ieee_is_finite(ek(1:num_fluids)))
+                            ek(1:num_fluids) = 0._wp
+                        end where
 
                         ! calculating volume fractions, internal energies, and total entropy
                         rhos = 0.0_wp
@@ -260,7 +267,9 @@ contains
                             q_cons_vf(i + advxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)/rhok(i)
 
                             ! alpha*rho*e
-                            q_cons_vf(i + intxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)*ek(i)
+                            if (intxb > 0) then
+                                q_cons_vf(i + intxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)*ek(i)
+                            end if
 
                             ! Total entropy
                             rhos = rhos + q_cons_vf(i + contxb - 1)%sf(j, k, l)*sk(i)
