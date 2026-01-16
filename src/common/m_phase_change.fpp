@@ -143,6 +143,10 @@ contains
                         $:GPU_LOOP(parallelism='[seq]')
                         do i = momxb, momxe
 
+                            if (.not. ieee_is_finite(q_cons_vf(i)%sf(j, k, l))) then
+                                q_cons_vf(i)%sf(j, k, l) = 0.0_wp
+                            end if
+
                             dynE = dynE + 5.0e-1_wp*q_cons_vf(i)%sf(j, k, l)**2/rho
 
                         end do
