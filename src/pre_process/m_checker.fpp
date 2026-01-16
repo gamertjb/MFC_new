@@ -40,7 +40,8 @@ contains
 
     !> Checks constraints on phase-change options during preprocessing
     impure subroutine s_check_inputs_phase_change
-        @:PROHIBIT(relax .and. model_eqns /= 3, "phase change requires model_eqns = 3")
+        @:PROHIBIT(relax .and. .not. (model_eqns == 2 .or. model_eqns == 3), &
+            "phase change requires model_eqns = 2 or 3")
     end subroutine s_check_inputs_phase_change
 
     !> Checks if mpi is enabled with parallel_io

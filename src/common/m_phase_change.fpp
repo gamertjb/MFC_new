@@ -288,6 +288,23 @@ contains
                             rhos = rhos + q_cons_vf(i + contxb - 1)%sf(j, k, l)*sk(i)
 
                         end do
+
+                        if (model_eqns == 2) then
+                            TvF = 0.0_wp
+                            $:GPU_LOOP(parallelism='[seq]')
+                            do i = 1, num_fluids
+                                q_cons_vf(i + advxb - 1)%sf(j, k, l) = min(1.0_wp - palpha_eps, &
+                                    max(palpha_eps, q_cons_vf(i + advxb - 1)%sf(j, k, l)))
+                                TvF = TvF + q_cons_vf(i + advxb - 1)%sf(j, k, l)
+                            end do
+                            if (TvF > sgm_eps) then
+                                $:GPU_LOOP(parallelism='[seq]')
+                                do i = 1, num_fluids
+                                    q_cons_vf(i + advxb - 1)%sf(j, k, l) = &
+                                        q_cons_vf(i + advxb - 1)%sf(j, k, l)/TvF
+                                end do
+                            end if
+                        end if
                     end do
                 end do
             end do
