@@ -31,11 +31,18 @@ contains
         call s_check_inputs_qbmm_and_polydisperse
         call s_check_inputs_perturb_density
         call s_check_inputs_chemistry
+        call s_check_inputs_phase_change
         call s_check_inputs_misc
         call s_check_bc
         call s_check_simplex_noise
 
     end subroutine s_check_inputs
+
+    !> Checks constraints on phase-change options during preprocessing
+    impure subroutine s_check_inputs_phase_change
+        @:PROHIBIT(relax .and. .not. (model_eqns == 2 .or. model_eqns == 3), &
+            "phase change requires model_eqns = 2 or 3")
+    end subroutine s_check_inputs_phase_change
 
     !> Checks if mpi is enabled with parallel_io
     impure subroutine s_check_parallel_io
