@@ -758,7 +758,7 @@ contains
             dt_local = minval(max_dt)
         #:endcall GPU_PARALLEL
 
-        if (.not. ieee_is_finite(dt_local) .or. dt_local <= 0._wp) then
+        if (.not. ieee_is_finite(dt_local) .or. dt_local < dt_min) then
             dt_local = dt_min
         end if
 
@@ -768,7 +768,7 @@ contains
             call s_mpi_allreduce_min(dt_local, dt)
         end if
 
-        if (.not. ieee_is_finite(dt) .or. dt <= 0._wp) then
+        if (.not. ieee_is_finite(dt) .or. dt < dt_min) then
             dt = dt_min
         end if
 

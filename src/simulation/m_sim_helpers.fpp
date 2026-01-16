@@ -328,6 +328,9 @@ contains
         else
             max_dt(j, k, l) = icfl_dt
         end if
+        if (.not. ieee_is_finite(max_dt(j, k, l)) .or. max_dt(j, k, l) < dt_min) then
+            max_dt(j, k, l) = dt_min
+        end if
 
     end subroutine s_compute_dt_from_cfl
 
