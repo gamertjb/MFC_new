@@ -123,6 +123,8 @@ contains
 
                         end do
 
+                        rho = max(rho, sgm_eps)
+
                         ! calculating the total reacting mass for the phase change process. By hypothesis, this should not change
                         ! throughout the phase-change process.
                         rM = q_cons_vf(lp + contxb - 1)%sf(j, k, l) + q_cons_vf(vp + contxb - 1)%sf(j, k, l)
