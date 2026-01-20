@@ -27,6 +27,10 @@ module m_bubbles_EL
 
     use m_helper
 
+    use m_constants
+
+    use ieee_arithmetic
+
     implicit none
 
     !(nBub)
@@ -1102,6 +1106,7 @@ contains
         integer, intent(in) :: stage
 
         integer :: k
+        real(wp), parameter :: radius_floor = sgm_eps
 
         if (time_stepper == 1) then ! 1st order TVD RK
             #:call GPU_PARALLEL_LOOP(private='[k]')
@@ -1113,6 +1118,13 @@ contains
                     mtn_vel(k, 1:3, 1) = mtn_vel(k, 1:3, 1) + dt*mtn_dveldt(k, 1:3, 1)
                     gas_p(k, 1) = gas_p(k, 1) + dt*gas_dpdt(k, 1)
                     gas_mv(k, 1) = gas_mv(k, 1) + dt*gas_dmvdt(k, 1)
+                    if (.not. ieee_is_finite(intfc_rad(k, 1)) .or. intfc_rad(k, 1) <= 0._wp) then
+                        intfc_rad(k, 1) = radius_floor
+                        intfc_vel(k, 1) = 0._wp
+                    end if
+                    if (.not. ieee_is_finite(intfc_vel(k, 1))) then
+                        intfc_vel(k, 1) = 0._wp
+                    end if
                 end do
             #:endcall GPU_PARALLEL_LOOP
 
@@ -1136,6 +1148,13 @@ contains
                         mtn_vel(k, 1:3, 2) = mtn_vel(k, 1:3, 1) + dt*mtn_dveldt(k, 1:3, 1)
                         gas_p(k, 2) = gas_p(k, 1) + dt*gas_dpdt(k, 1)
                         gas_mv(k, 2) = gas_mv(k, 1) + dt*gas_dmvdt(k, 1)
+                        if (.not. ieee_is_finite(intfc_rad(k, 2)) .or. intfc_rad(k, 2) <= 0._wp) then
+                            intfc_rad(k, 2) = radius_floor
+                            intfc_vel(k, 2) = 0._wp
+                        end if
+                        if (.not. ieee_is_finite(intfc_vel(k, 2))) then
+                            intfc_vel(k, 2) = 0._wp
+                        end if
                     end do
                 #:endcall GPU_PARALLEL_LOOP
 
@@ -1149,6 +1168,13 @@ contains
                         mtn_vel(k, 1:3, 1) = mtn_vel(k, 1:3, 1) + dt*(mtn_dveldt(k, 1:3, 1) + mtn_dveldt(k, 1:3, 2))/2._wp
                         gas_p(k, 1) = gas_p(k, 1) + dt*(gas_dpdt(k, 1) + gas_dpdt(k, 2))/2._wp
                         gas_mv(k, 1) = gas_mv(k, 1) + dt*(gas_dmvdt(k, 1) + gas_dmvdt(k, 2))/2._wp
+                        if (.not. ieee_is_finite(intfc_rad(k, 1)) .or. intfc_rad(k, 1) <= 0._wp) then
+                            intfc_rad(k, 1) = radius_floor
+                            intfc_vel(k, 1) = 0._wp
+                        end if
+                        if (.not. ieee_is_finite(intfc_vel(k, 1))) then
+                            intfc_vel(k, 1) = 0._wp
+                        end if
                     end do
                 #:endcall GPU_PARALLEL_LOOP
 
@@ -1174,6 +1200,13 @@ contains
                         mtn_vel(k, 1:3, 2) = mtn_vel(k, 1:3, 1) + dt*mtn_dveldt(k, 1:3, 1)
                         gas_p(k, 2) = gas_p(k, 1) + dt*gas_dpdt(k, 1)
                         gas_mv(k, 2) = gas_mv(k, 1) + dt*gas_dmvdt(k, 1)
+                        if (.not. ieee_is_finite(intfc_rad(k, 2)) .or. intfc_rad(k, 2) <= 0._wp) then
+                            intfc_rad(k, 2) = radius_floor
+                            intfc_vel(k, 2) = 0._wp
+                        end if
+                        if (.not. ieee_is_finite(intfc_vel(k, 2))) then
+                            intfc_vel(k, 2) = 0._wp
+                        end if
                     end do
                 #:endcall GPU_PARALLEL_LOOP
 
@@ -1187,6 +1220,13 @@ contains
                         mtn_vel(k, 1:3, 2) = mtn_vel(k, 1:3, 1) + dt*(mtn_dveldt(k, 1:3, 1) + mtn_dveldt(k, 1:3, 2))/4._wp
                         gas_p(k, 2) = gas_p(k, 1) + dt*(gas_dpdt(k, 1) + gas_dpdt(k, 2))/4._wp
                         gas_mv(k, 2) = gas_mv(k, 1) + dt*(gas_dmvdt(k, 1) + gas_dmvdt(k, 2))/4._wp
+                        if (.not. ieee_is_finite(intfc_rad(k, 2)) .or. intfc_rad(k, 2) <= 0._wp) then
+                            intfc_rad(k, 2) = radius_floor
+                            intfc_vel(k, 2) = 0._wp
+                        end if
+                        if (.not. ieee_is_finite(intfc_vel(k, 2))) then
+                            intfc_vel(k, 2) = 0._wp
+                        end if
                     end do
                 #:endcall GPU_PARALLEL_LOOP
             elseif (stage == 3) then
@@ -1199,6 +1239,13 @@ contains
                         mtn_vel(k, 1:3, 1) = mtn_vel(k, 1:3, 1) + (2._wp/3._wp)*dt*(mtn_dveldt(k, 1:3, 1)/4._wp + mtn_dveldt(k, 1:3, 2)/4._wp + mtn_dveldt(k, 1:3, 3))
                         gas_p(k, 1) = gas_p(k, 1) + (2._wp/3._wp)*dt*(gas_dpdt(k, 1)/4._wp + gas_dpdt(k, 2)/4._wp + gas_dpdt(k, 3))
                         gas_mv(k, 1) = gas_mv(k, 1) + (2._wp/3._wp)*dt*(gas_dmvdt(k, 1)/4._wp + gas_dmvdt(k, 2)/4._wp + gas_dmvdt(k, 3))
+                        if (.not. ieee_is_finite(intfc_rad(k, 1)) .or. intfc_rad(k, 1) <= 0._wp) then
+                            intfc_rad(k, 1) = radius_floor
+                            intfc_vel(k, 1) = 0._wp
+                        end if
+                        if (.not. ieee_is_finite(intfc_vel(k, 1))) then
+                            intfc_vel(k, 1) = 0._wp
+                        end if
                     end do
                 #:endcall GPU_PARALLEL_LOOP
 

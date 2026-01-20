@@ -46,6 +46,8 @@ module m_time_steppers
 
     use m_body_forces
 
+    use ieee_arithmetic
+
     implicit none
 
     type(vector_field), allocatable, dimension(:) :: q_cons_ts !<
@@ -722,6 +724,7 @@ contains
         type(vector_field) :: gm_alpha_qp
 
         real(wp) :: dt_local
+        real(wp), parameter :: dt_min = 1.0e-9_wp
         integer :: j, k, l !< Generic loop iterators
 
         if (.not. igr) then
@@ -755,10 +758,18 @@ contains
             dt_local = minval(max_dt)
         #:endcall GPU_PARALLEL
 
+        if (.not. ieee_is_finite(dt_local) .or. dt_local < dt_min) then
+            dt_local = dt_min
+        end if
+
         if (num_procs == 1) then
             dt = dt_local
         else
             call s_mpi_allreduce_min(dt_local, dt)
+        end if
+
+        if (.not. ieee_is_finite(dt) .or. dt < dt_min) then
+            dt = dt_min
         end if
 
         $:GPU_UPDATE(device='[dt]')

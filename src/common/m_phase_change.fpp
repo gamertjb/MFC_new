@@ -109,12 +109,21 @@ contains
                         do i = 1, num_fluids
 
                             ! Mixture density
+                            if (.not. ieee_is_finite(q_cons_vf(i + contxb - 1)%sf(j, k, l))) then
+                                q_cons_vf(i + contxb - 1)%sf(j, k, l) = 0.0_wp
+                            end if
+                            if (.not. ieee_is_finite(q_cons_vf(i + advxb - 1)%sf(j, k, l))) then
+                                q_cons_vf(i + advxb - 1)%sf(j, k, l) = 0.0_wp
+                            end if
+
                             rho = rho + q_cons_vf(i + contxb - 1)%sf(j, k, l)
 
                             ! Total Volume Fraction
                             TvF = TvF + q_cons_vf(i + advxb - 1)%sf(j, k, l)
 
                         end do
+
+                        rho = max(rho, sgm_eps)
 
                         ! calculating the total reacting mass for the phase change process. By hypothesis, this should not change
                         ! throughout the phase-change process.
@@ -134,6 +143,10 @@ contains
                         $:GPU_LOOP(parallelism='[seq]')
                         do i = momxb, momxe
 
+                            if (.not. ieee_is_finite(q_cons_vf(i)%sf(j, k, l))) then
+                                q_cons_vf(i)%sf(j, k, l) = 0.0_wp
+                            end if
+
                             dynE = dynE + 5.0e-1_wp*q_cons_vf(i)%sf(j, k, l)**2/rho
 
                         end do
@@ -141,7 +154,13 @@ contains
                         ! calculating the total energy that MUST be preserved throughout the pT- and pTg-relaxation procedures
                         ! at each of the cells. The internal energy is calculated as the total energy minus the kinetic
                         ! energy to preserved its value at sharp interfaces
+                        if (.not. ieee_is_finite(q_cons_vf(E_idx)%sf(j, k, l))) then
+                            q_cons_vf(E_idx)%sf(j, k, l) = dynE
+                        end if
                         rhoe = q_cons_vf(E_idx)%sf(j, k, l) - dynE
+                        if (.not. ieee_is_finite(rhoe)) then
+                            rhoe = 0.0_wp
+                        end if
 
                         ! Calling pT-equilibrium for either finishing phase-change module, or as an IC for the pTg-equilibrium
                         ! for this case, MFL cannot be either 0 or 1, so I chose it to be 2
@@ -245,11 +264,18 @@ contains
                         ! densities
                         rhok(1:num_fluids) = (pS + ps_inf(1:num_fluids)) &
                                              /((gs_min(1:num_fluids) - 1)*cvs(1:num_fluids)*TS)
+                        where (.not. ieee_is_finite(rhok(1:num_fluids)))
+                            rhok(1:num_fluids) = sgm_eps
+                        end where
+                        rhok(1:num_fluids) = max(rhok(1:num_fluids), sgm_eps)
 
                         ! internal energy
                         ek(1:num_fluids) = (pS + gs_min(1:num_fluids) &
                                             *ps_inf(1:num_fluids))/(pS + ps_inf(1:num_fluids)) &
                                            *cvs(1:num_fluids)*TS + qvs(1:num_fluids)
+                        where (.not. ieee_is_finite(ek(1:num_fluids)))
+                            ek(1:num_fluids) = 0._wp
+                        end where
 
                         ! calculating volume fractions, internal energies, and total entropy
                         rhos = 0.0_wp
@@ -260,12 +286,37 @@ contains
                             q_cons_vf(i + advxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)/rhok(i)
 
                             ! alpha*rho*e
-                            q_cons_vf(i + intxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)*ek(i)
+                            if (intxb > 0) then
+                                q_cons_vf(i + intxb - 1)%sf(j, k, l) = q_cons_vf(i + contxb - 1)%sf(j, k, l)*ek(i)
+                            end if
 
                             ! Total entropy
                             rhos = rhos + q_cons_vf(i + contxb - 1)%sf(j, k, l)*sk(i)
 
                         end do
+
+                        if (model_eqns == 2) then
+                            TvF = 0.0_wp
+                            $:GPU_LOOP(parallelism='[seq]')
+                            do i = 1, num_fluids
+                                q_cons_vf(i + advxb - 1)%sf(j, k, l) = min(1.0_wp - palpha_eps, &
+                                    max(palpha_eps, q_cons_vf(i + advxb - 1)%sf(j, k, l)))
+                                TvF = TvF + q_cons_vf(i + advxb - 1)%sf(j, k, l)
+                            end do
+                            if (TvF > sgm_eps) then
+                                $:GPU_LOOP(parallelism='[seq]')
+                                do i = 1, num_fluids
+                                    q_cons_vf(i + advxb - 1)%sf(j, k, l) = &
+                                        q_cons_vf(i + advxb - 1)%sf(j, k, l)/TvF
+                                end do
+                            end if
+                            if (surface_tension .and. c_idx > 0) then
+                                q_cons_vf(c_idx)%sf(j, k, l) = q_cons_vf(advxb)%sf(j, k, l)
+                                if (c2_idx > 0) then
+                                    q_cons_vf(c2_idx)%sf(j, k, l) = q_cons_vf(advxb + 1)%sf(j, k, l)
+                                end if
+                            end if
+                        end if
                     end do
                 end do
             end do
