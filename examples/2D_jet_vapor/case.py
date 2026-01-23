@@ -96,6 +96,8 @@ jet_center_y = y_beg + 0.5 * jet_length_y
 
 # Lagrangian bubble sizing (increase to make the initial bubble larger)
 bubble_charwidth = 2.0 * djet
+bubble_radius = 0.15 * djet
+bubble_pres = pA + 2.0 * sigma_hex_vapor / bubble_radius
 
 print(
     json.dumps(
@@ -117,7 +119,7 @@ print(
             "t_save": t_save,
             "cfl_target": cfl,
             # Numerics --------------------------------------------------------
-            "num_patches": 2,
+            "num_patches": 3,
             "model_eqns": 3,
             "alt_soundspeed": "F",
             "num_fluids": 3,
@@ -199,6 +201,22 @@ print(
             "patch_icpp(2)%alpha(3)": _eps,
             "patch_icpp(2)%cf_val": 1,
             "patch_icpp(2)%cf_val2": 1,
+            # Patch 3: gaseous hexane bubble inside the liquid column ---------
+            "patch_icpp(3)%geometry": 2,
+            "patch_icpp(3)%alter_patch(1)": "T",
+            "patch_icpp(3)%alter_patch(2)": "T",
+            "patch_icpp(3)%x_centroid": jet_center_x,
+            "patch_icpp(3)%y_centroid": jet_center_y,
+            "patch_icpp(3)%radius": bubble_radius,
+            "patch_icpp(3)%vel(1)": 0.0,
+            "patch_icpp(3)%vel(2)": uJ,
+            "patch_icpp(3)%pres": bubble_pres,
+            "patch_icpp(3)%alpha_rho(1)": _eps * rhoL,
+            "patch_icpp(3)%alpha_rho(2)": (1.0 - 2.0 * _eps) * rhoV,
+            "patch_icpp(3)%alpha_rho(3)": _eps * rhoA,
+            "patch_icpp(3)%alpha(1)": _eps,
+            "patch_icpp(3)%alpha(2)": 1.0 - 2.0 * _eps,
+            "patch_icpp(3)%alpha(3)": _eps,
             # Fluid properties -------------------------------------------------
             "fluid_pp(1)%gamma": gammaL_field,
             "fluid_pp(1)%pi_inf": pi_inf_L,
