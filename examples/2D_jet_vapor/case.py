@@ -220,6 +220,8 @@ print(
             "patch_icpp(3)%alpha(1)": 0.0,
             "patch_icpp(3)%alpha(2)": 0.0,
             "patch_icpp(3)%alpha(3)": 1.0,
+            "patch_icpp(3)%cf_val": 0,
+            "patch_icpp(3)%cf_val2": 0,
             # Fluid properties -------------------------------------------------
             "fluid_pp(1)%gamma": gammaL_field,
             "fluid_pp(1)%pi_inf": pi_inf_L,
