@@ -207,6 +207,7 @@ print(
             # Patch 3: vapor bubble inside the liquid jet ---------------------
             "patch_icpp(3)%geometry": 2,
             "patch_icpp(3)%alter_patch(1)": "T",
+            "patch_icpp(3)%alter_patch(2)": "T",
             "patch_icpp(3)%x_centroid": bubble_center_x,
             "patch_icpp(3)%y_centroid": bubble_center_y,
             "patch_icpp(3)%radius": bubble_radius,
