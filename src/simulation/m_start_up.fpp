@@ -1212,6 +1212,7 @@ contains
         integer :: stor
 
         integer :: save_count
+        integer :: cf_nan_count(3)
 
         if (down_sample) then
             call s_populate_variables_buffers(bc_type, q_cons_ts(1)%vf)
@@ -1237,6 +1238,7 @@ contains
 
         call cpu_time(start)
         call nvtxStartRange("SAVE-DATA")
+        cf_nan_count = 0
         do i = 1, sys_size
 #ifndef FRONTIER_UNIFIED
             $:GPU_UPDATE(host='[q_cons_ts(stor)%vf(i)%sf]')
@@ -1245,13 +1247,28 @@ contains
                 do k = 0, n
                     do j = 0, m
                         if (ieee_is_nan(real(q_cons_ts(stor)%vf(i)%sf(j, k, l), kind=wp))) then
-                            print *, "NaN(s) in timestep output.", j, k, l, i, proc_rank, t_step, m, n, p
-                            error stop "NaN(s) in timestep output."
+                            if (i == c_idx .or. i == c2_idx .or. i == c3_idx) then
+                                q_cons_ts(stor)%vf(i)%sf(j, k, l) = 0._wp
+                                if (i == c_idx) cf_nan_count(1) = cf_nan_count(1) + 1
+                                if (i == c2_idx) cf_nan_count(2) = cf_nan_count(2) + 1
+                                if (i == c3_idx) cf_nan_count(3) = cf_nan_count(3) + 1
+                                if (cf_nan_count(1) + cf_nan_count(2) + cf_nan_count(3) == 1) then
+                                    print *, "NaN in color function replaced with 0:", j, k, l, i, proc_rank, t_step
+                                end if
+                            else
+                                print *, "NaN(s) in timestep output.", j, k, l, i, proc_rank, t_step, m, n, p
+                                error stop "NaN(s) in timestep output."
+                            end if
                         end if
                     end do
                 end do
             end do
         end do
+
+        if (sum(cf_nan_count) > 0) then
+            print *, "Color function NaNs replaced with 0:", cf_nan_count(1), cf_nan_count(2), cf_nan_count(3), &
+                "rank", proc_rank, "t_step", t_step
+        end if
 
         if (qbmm .and. .not. polytropic) then
             $:GPU_UPDATE(host='[pb_ts(1)%sf]')
