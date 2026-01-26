@@ -1131,6 +1131,7 @@ contains
                         if (surface_tension) then
                             qK_prim_vf(c_idx)%sf(j, k, l) = qK_cons_vf(c_idx)%sf(j, k, l)
                             if (c2_idx > 0) qK_prim_vf(c2_idx)%sf(j, k, l) = qK_cons_vf(c2_idx)%sf(j, k, l)
+                            if (c3_idx > 0) qK_prim_vf(c3_idx)%sf(j, k, l) = qK_cons_vf(c3_idx)%sf(j, k, l)
                         end if
 
                         if (cont_damage) qK_prim_vf(damage_idx)%sf(j, k, l) = qK_cons_vf(damage_idx)%sf(j, k, l)
@@ -1405,6 +1406,7 @@ contains
                     if (surface_tension) then
                         q_cons_vf(c_idx)%sf(j, k, l) = q_prim_vf(c_idx)%sf(j, k, l)
                         if (c2_idx > 0) q_cons_vf(c2_idx)%sf(j, k, l) = q_prim_vf(c2_idx)%sf(j, k, l)
+                        if (c3_idx > 0) q_cons_vf(c3_idx)%sf(j, k, l) = q_prim_vf(c3_idx)%sf(j, k, l)
                     end if
 
                     if (cont_damage) q_cons_vf(damage_idx)%sf(j, k, l) = q_prim_vf(damage_idx)%sf(j, k, l)

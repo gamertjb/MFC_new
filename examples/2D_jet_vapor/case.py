@@ -82,6 +82,7 @@ t_save = time_end / num_output_frames
 _eps = 1.0e-5
 sigma_hex_air = 0.018
 sigma_hex_vapor = 0.018
+sigma_air_vapor = 0.0
 
 # Convenient geometry helpers
 crossflow_center_x = 0.5 * (x_beg + x_end)
@@ -96,6 +97,11 @@ jet_center_y = y_beg + 0.5 * jet_length_y
 
 # Lagrangian bubble sizing (increase to make the initial bubble larger)
 bubble_charwidth = 2.0 * djet
+
+# Eulerian bubble sizing for the initial vapor bubble in the jet
+bubble_radius = 0.05 * djet
+bubble_center_x = jet_center_x
+bubble_center_y = jet_center_y
 
 print(
     json.dumps(
@@ -117,7 +123,7 @@ print(
             "t_save": t_save,
             "cfl_target": cfl,
             # Numerics --------------------------------------------------------
-            "num_patches": 2,
+            "num_patches": 3,
             "model_eqns": 3,
             "alt_soundspeed": "F",
             "num_fluids": 3,
@@ -164,6 +170,11 @@ print(
             "cf_wrt": "T",
             "parallel_io": "T",
             "lag_params%charwidth": bubble_charwidth,
+            # Phase/alpha ordering: alpha(1)=liquid hexane, alpha(2)=air, alpha(3)=hexane vapor
+            # Color functions for surface tension:
+            #   cf_val  -> liquid/air interface (sigma = sigma_hex_air)
+            #   cf_val2 -> liquid/vapor interface (sigma_2 = sigma_hex_vapor)
+            #   cf_val3 -> air/vapor interface (sigma_3 = sigma_air_vapor)
             # Patch 1: crossflow (mostly air) ---------------------------------
             "patch_icpp(1)%geometry": 3,
             "patch_icpp(1)%x_centroid": crossflow_center_x,
@@ -174,13 +185,14 @@ print(
             "patch_icpp(1)%vel(2)": 0.0,
             "patch_icpp(1)%pres": pA,
             "patch_icpp(1)%alpha_rho(1)": _eps * rhoL,
-            "patch_icpp(1)%alpha_rho(2)": _eps * rhoV,
-            "patch_icpp(1)%alpha_rho(3)": (1.0 - 2.0 * _eps) * rhoA,
+            "patch_icpp(1)%alpha_rho(2)": (1.0 - 2.0 * _eps) * rhoA,
+            "patch_icpp(1)%alpha_rho(3)": _eps * rhoV,
             "patch_icpp(1)%alpha(1)": _eps,
-            "patch_icpp(1)%alpha(2)": _eps,
-            "patch_icpp(1)%alpha(3)": 1.0 - 2.0 * _eps,
+            "patch_icpp(1)%alpha(2)": 1.0 - 2.0 * _eps,
+            "patch_icpp(1)%alpha(3)": _eps,
             "patch_icpp(1)%cf_val": 0,
             "patch_icpp(1)%cf_val2": 0,
+            "patch_icpp(1)%cf_val3": 0,
             # Patch 2: liquid jet with a small vapor core ---------------------
             "patch_icpp(2)%geometry": 3,
             "patch_icpp(2)%alter_patch(1)": "T",
@@ -192,13 +204,33 @@ print(
             "patch_icpp(2)%vel(2)": uJ,
             "patch_icpp(2)%pres": pA,
             "patch_icpp(2)%alpha_rho(1)": (1.0 - 2.0 * _eps) * rhoL,
-            "patch_icpp(2)%alpha_rho(2)": _eps * rhoV,
-            "patch_icpp(2)%alpha_rho(3)": _eps * rhoA,
+            "patch_icpp(2)%alpha_rho(2)": _eps * rhoA,
+            "patch_icpp(2)%alpha_rho(3)": _eps * rhoV,
             "patch_icpp(2)%alpha(1)": 1.0 - 2.0 * _eps,
             "patch_icpp(2)%alpha(2)": _eps,
             "patch_icpp(2)%alpha(3)": _eps,
             "patch_icpp(2)%cf_val": 1,
-            "patch_icpp(2)%cf_val2": 1,
+            "patch_icpp(2)%cf_val2": 0,
+            "patch_icpp(2)%cf_val3": 0,
+            # Patch 3: vapor bubble inside the liquid jet ---------------------
+            "patch_icpp(3)%geometry": 2,
+            "patch_icpp(3)%alter_patch(1)": "T",
+            "patch_icpp(3)%alter_patch(2)": "T",
+            "patch_icpp(3)%x_centroid": bubble_center_x,
+            "patch_icpp(3)%y_centroid": bubble_center_y,
+            "patch_icpp(3)%radius": bubble_radius,
+            "patch_icpp(3)%vel(1)": 0.0,
+            "patch_icpp(3)%vel(2)": uJ,
+            "patch_icpp(3)%pres": pA,
+            "patch_icpp(3)%alpha_rho(1)": 0.0,
+            "patch_icpp(3)%alpha_rho(2)": 0.0,
+            "patch_icpp(3)%alpha_rho(3)": rhoV,
+            "patch_icpp(3)%alpha(1)": 0.0,
+            "patch_icpp(3)%alpha(2)": 0.0,
+            "patch_icpp(3)%alpha(3)": 1.0,
+            "patch_icpp(3)%cf_val": 0,
+            "patch_icpp(3)%cf_val2": 1,
+            "patch_icpp(3)%cf_val3": 1,
             # Fluid properties -------------------------------------------------
             "fluid_pp(1)%gamma": gammaL_field,
             "fluid_pp(1)%pi_inf": pi_inf_L,
@@ -206,21 +238,22 @@ print(
             "fluid_pp(1)%qv": qv_L,
             "fluid_pp(1)%qvp": qvp_L,
             "fluid_pp(1)%Re(1)": 1.0 / muL,
-            "fluid_pp(2)%gamma": gammaV_field,
-            "fluid_pp(2)%pi_inf": pi_inf_V,
-            "fluid_pp(2)%cv": cvV,
-            "fluid_pp(2)%qv": qv_V,
-            "fluid_pp(2)%qvp": qvp_V,
-            "fluid_pp(2)%Re(1)": 1.0 / muV,
-            "fluid_pp(3)%gamma": 1.0 / (gamma_air - 1.0),
-            "fluid_pp(3)%pi_inf": pi_inf_A,
-            "fluid_pp(3)%cv": cvA,
-            "fluid_pp(3)%qv": qv_A,
-            "fluid_pp(3)%qvp": qvp_A,
-            "fluid_pp(3)%Re(1)": 1.0 / muA,
+            "fluid_pp(2)%gamma": 1.0 / (gamma_air - 1.0),
+            "fluid_pp(2)%pi_inf": pi_inf_A,
+            "fluid_pp(2)%cv": cvA,
+            "fluid_pp(2)%qv": qv_A,
+            "fluid_pp(2)%qvp": qvp_A,
+            "fluid_pp(2)%Re(1)": 1.0 / muA,
+            "fluid_pp(3)%gamma": gammaV_field,
+            "fluid_pp(3)%pi_inf": pi_inf_V,
+            "fluid_pp(3)%cv": cvV,
+            "fluid_pp(3)%qv": qv_V,
+            "fluid_pp(3)%qvp": qvp_V,
+            "fluid_pp(3)%Re(1)": 1.0 / muV,
             # Surface tension --------------------------------------------------
             "sigma": sigma_hex_air,
             "sigma_2": sigma_hex_vapor,
+            "sigma_3": sigma_air_vapor,
         }
     )
 )

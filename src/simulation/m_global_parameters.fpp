@@ -290,11 +290,12 @@ module m_global_parameters
     type(int_bounds_info) :: species_idx               !< Indexes of first & last concentration eqns.
     integer :: c_idx                                   !< Index of color function
     integer :: c2_idx                                  !< Index of secondary color function
+    integer :: c3_idx                                  !< Index of tertiary color function
     integer :: damage_idx                              !< Index of damage state variable (D) for continuum damage model
     !> @}
     $:GPU_DECLARE(create='[sys_size,E_idx,n_idx,bub_idx,alf_idx,gamma_idx]')
     $:GPU_DECLARE(create='[pi_inf_idx,B_idx,stress_idx,xi_idx,b_size]')
-    $:GPU_DECLARE(create='[tensor_size,species_idx,c_idx,c2_idx]')
+    $:GPU_DECLARE(create='[tensor_size,species_idx,c_idx,c2_idx,c3_idx]')
 
     ! Cell Indices for the (local) interior points (O-m, O-n, 0-p).
     ! Stands for "InDices With INTerior".
@@ -499,8 +500,9 @@ module m_global_parameters
 
     real(wp) :: sigma
     real(wp) :: sigma_2
+    real(wp) :: sigma_3
     logical :: surface_tension
-    $:GPU_DECLARE(create='[sigma,sigma_2,surface_tension]')
+    $:GPU_DECLARE(create='[sigma,sigma_2,sigma_3,surface_tension]')
     !> @}
 
     integer :: momxb, momxe
@@ -733,6 +735,7 @@ contains
         ! Surface tension
         sigma = dflt_real
         sigma_2 = dflt_real
+        sigma_3 = dflt_real
         surface_tension = .false.
 
         bodyForces = .false.
@@ -1279,12 +1282,16 @@ contains
                 if (num_fluids > 2) then
                     c2_idx = sys_size + 1
                     sys_size = c2_idx
+                    c3_idx = sys_size + 1
+                    sys_size = c3_idx
                 else
                     c2_idx = 0
+                    c3_idx = 0
                 end if
             else
                 c_idx = 0
                 c2_idx = 0
+                c3_idx = 0
             end if
 
             if (cont_damage) then
@@ -1404,7 +1411,7 @@ contains
         $:GPU_UPDATE(device='[momxb,momxe,advxb,advxe,contxb,contxe, &
             & bubxb,bubxe,intxb,intxe,sys_size,buff_size,E_idx, &
             & alf_idx,n_idx,adv_n,adap_dt,pi_fac,strxb,strxe, &
-            & chemxb,chemxe,c_idx,adap_dt_tol,adap_dt_max_iters]')
+            & chemxb,chemxe,c_idx,c2_idx,c3_idx,adap_dt_tol,adap_dt_max_iters]')
         $:GPU_UPDATE(device='[b_size,xibeg,xiend,tensor_size]')
 
         $:GPU_UPDATE(device='[species_idx]')

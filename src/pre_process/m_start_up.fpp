@@ -147,7 +147,7 @@ contains
             sigR, sigV, dist_type, rhoRV, &
             file_per_process, relax, relax_model, &
             palpha_eps, ptgalpha_eps, ib, num_ibs, patch_ib, &
-            sigma, sigma_2, adv_n, cfl_adap_dt, cfl_const_dt, n_start, &
+            sigma, sigma_2, sigma_3, adv_n, cfl_adap_dt, cfl_const_dt, n_start, &
             n_start_old, surface_tension, hyperelasticity, pre_stress, &
             elliptic_smoothing, elliptic_smoothing_iters, &
             viscous, bubbles_lagrange, bc_x, bc_y, bc_z, num_bc_patches, &

@@ -33,15 +33,17 @@ module m_surface_tension
     !> @{
     type(scalar_field), allocatable, dimension(:) :: c_divs
     type(scalar_field), allocatable, dimension(:) :: c2_divs
+    type(scalar_field), allocatable, dimension(:) :: c3_divs
     !> @)
-    $:GPU_DECLARE(create='[c_divs,c2_divs]')
+    $:GPU_DECLARE(create='[c_divs,c2_divs,c3_divs]')
 
     !> @name cell boundary reconstructed gradient components and magnitude
     !> @{
     real(wp), allocatable, dimension(:, :, :, :) :: gL_x, gR_x, gL_y, gR_y, gL_z, gR_z
     real(wp), allocatable, dimension(:, :, :, :) :: g2L_x, g2R_x, g2L_y, g2R_y, g2L_z, g2R_z
+    real(wp), allocatable, dimension(:, :, :, :) :: g3L_x, g3R_x, g3L_y, g3R_y, g3L_z, g3R_z
     !> @}
-    $:GPU_DECLARE(create='[gL_x,gR_x,gL_y,gR_y,gL_z,gR_z,g2L_x,g2R_x,g2L_y,g2R_y,g2L_z,g2R_z]')
+    $:GPU_DECLARE(create='[gL_x,gR_x,gL_y,gR_y,gL_z,gR_z,g2L_x,g2R_x,g2L_y,g2R_y,g2L_z,g2R_z,g3L_x,g3R_x,g3L_y,g3R_y,g3L_z,g3R_z]')
 
     type(int_bounds_info) :: is1, is2, is3, iv
     $:GPU_DECLARE(create='[is1,is2,is3,iv]')
@@ -56,6 +58,7 @@ contains
 
         if (num_fluids > 2) then
             @:ALLOCATE(c2_divs(1:num_dims + 1))
+            @:ALLOCATE(c3_divs(1:num_dims + 1))
         end if
 
         do j = 1, num_dims + 1
@@ -65,6 +68,8 @@ contains
             if (num_fluids > 2) then
                 @:ALLOCATE(c2_divs(j)%sf(idwbuff(1)%beg:idwbuff(1)%end, idwbuff(2)%beg:idwbuff(2)%end, idwbuff(3)%beg:idwbuff(3)%end))
                 @:ACC_SETUP_SFs(c2_divs(j))
+                @:ALLOCATE(c3_divs(j)%sf(idwbuff(1)%beg:idwbuff(1)%end, idwbuff(2)%beg:idwbuff(2)%end, idwbuff(3)%beg:idwbuff(3)%end))
+                @:ACC_SETUP_SFs(c3_divs(j))
             end if
         end do
 
@@ -80,6 +85,12 @@ contains
 
             @:ALLOCATE(g2L_y(idwbuff(2)%beg:idwbuff(2)%end, idwbuff(1)%beg:idwbuff(1)%end, idwbuff(3)%beg:idwbuff(3)%end, num_dims + 1))
             @:ALLOCATE(g2R_y(idwbuff(2)%beg:idwbuff(2)%end, idwbuff(1)%beg:idwbuff(1)%end, idwbuff(3)%beg:idwbuff(3)%end, num_dims + 1))
+
+            @:ALLOCATE(g3L_x(idwbuff(1)%beg:idwbuff(1)%end, idwbuff(2)%beg:idwbuff(2)%end, idwbuff(3)%beg:idwbuff(3)%end, num_dims + 1))
+            @:ALLOCATE(g3R_x(idwbuff(1)%beg:idwbuff(1)%end, idwbuff(2)%beg:idwbuff(2)%end, idwbuff(3)%beg:idwbuff(3)%end, num_dims + 1))
+
+            @:ALLOCATE(g3L_y(idwbuff(2)%beg:idwbuff(2)%end, idwbuff(1)%beg:idwbuff(1)%end, idwbuff(3)%beg:idwbuff(3)%end, num_dims + 1))
+            @:ALLOCATE(g3R_y(idwbuff(2)%beg:idwbuff(2)%end, idwbuff(1)%beg:idwbuff(1)%end, idwbuff(3)%beg:idwbuff(3)%end, num_dims + 1))
         end if
 
         if (p > 0) then
@@ -89,6 +100,8 @@ contains
             if (num_fluids > 2) then
                 @:ALLOCATE(g2L_z(idwbuff(3)%beg:idwbuff(3)%end, idwbuff(2)%beg:idwbuff(2)%end, idwbuff(1)%beg:idwbuff(1)%end, num_dims + 1))
                 @:ALLOCATE(g2R_z(idwbuff(3)%beg:idwbuff(3)%end, idwbuff(2)%beg:idwbuff(2)%end, idwbuff(1)%beg:idwbuff(1)%end, num_dims + 1))
+                @:ALLOCATE(g3L_z(idwbuff(3)%beg:idwbuff(3)%end, idwbuff(2)%beg:idwbuff(2)%end, idwbuff(1)%beg:idwbuff(1)%end, num_dims + 1))
+                @:ALLOCATE(g3R_z(idwbuff(3)%beg:idwbuff(3)%end, idwbuff(2)%beg:idwbuff(2)%end, idwbuff(1)%beg:idwbuff(1)%end, num_dims + 1))
             end if
         end if
     end subroutine s_initialize_surface_tension_module
@@ -190,6 +203,42 @@ contains
                                                                      sigma_coeff*c2_divs(num_dims + 1)%sf(j, k, l)*vSrc_rsx_vf(j, k, l, 1)
                                 end if
                             end if
+
+                            if (c3_idx > 0) then
+                                w1L = g3L_x(j, k, l, 1)
+                                w2L = g3L_x(j, k, l, 2)
+                                w3L = 0._wp
+                                if (p > 0) w3L = g3L_x(j, k, l, 3)
+
+                                w1R = g3R_x(j + 1, k, l, 1)
+                                w2R = g3R_x(j + 1, k, l, 2)
+                                w3R = 0._wp
+                                if (p > 0) w3R = g3R_x(j + 1, k, l, 3)
+
+                                normWL = g3L_x(j, k, l, num_dims + 1)
+                                normWR = g3R_x(j + 1, k, l, num_dims + 1)
+
+                                w1 = (w1L + w1R)/2._wp
+                                w2 = (w2L + w2R)/2._wp
+                                w3 = (w3L + w3R)/2._wp
+                                normW = (normWL + normWR)/2._wp
+
+                                if (normW > capillary_cutoff) then
+                                    sigma_coeff = sigma_3
+                                    @:compute_capillary_stress_tensor()
+
+                                    do i = 1, num_dims
+                                        flux_src_vf(momxb + i - 1)%sf(j, k, l) = &
+                                            flux_src_vf(momxb + i - 1)%sf(j, k, l) + Omega(1, i)
+
+                                        flux_src_vf(E_idx)%sf(j, k, l) = flux_src_vf(E_idx)%sf(j, k, l) + &
+                                                                         Omega(1, i)*vSrc_rsx_vf(j, k, l, i)
+                                    end do
+
+                                    flux_src_vf(E_idx)%sf(j, k, l) = flux_src_vf(E_idx)%sf(j, k, l) + &
+                                                                     sigma_coeff*c3_divs(num_dims + 1)%sf(j, k, l)*vSrc_rsx_vf(j, k, l, 1)
+                                end if
+                            end if
                         end do
                     end do
                 end do
@@ -273,6 +322,42 @@ contains
 
                                     flux_src_vf(E_idx)%sf(j, k, l) = flux_src_vf(E_idx)%sf(j, k, l) + &
                                                                      sigma_coeff*c2_divs(num_dims + 1)%sf(j, k, l)*vSrc_rsy_vf(k, j, l, 2)
+                                end if
+                            end if
+
+                            if (c3_idx > 0) then
+                                w1L = g3L_y(k, j, l, 1)
+                                w2L = g3L_y(k, j, l, 2)
+                                w3L = 0._wp
+                                if (p > 0) w3L = g3L_y(k, j, l, 3)
+
+                                w1R = g3R_y(k + 1, j, l, 1)
+                                w2R = g3R_y(k + 1, j, l, 2)
+                                w3R = 0._wp
+                                if (p > 0) w3R = g3R_y(k + 1, j, l, 3)
+
+                                normWL = g3L_y(k, j, l, num_dims + 1)
+                                normWR = g3R_y(k + 1, j, l, num_dims + 1)
+
+                                w1 = (w1L + w1R)/2._wp
+                                w2 = (w2L + w2R)/2._wp
+                                w3 = (w3L + w3R)/2._wp
+                                normW = (normWL + normWR)/2._wp
+
+                                if (normW > capillary_cutoff) then
+                                    sigma_coeff = sigma_3
+                                    @:compute_capillary_stress_tensor()
+
+                                    do i = 1, num_dims
+                                        flux_src_vf(momxb + i - 1)%sf(j, k, l) = &
+                                            flux_src_vf(momxb + i - 1)%sf(j, k, l) + Omega(2, i)
+
+                                        flux_src_vf(E_idx)%sf(j, k, l) = flux_src_vf(E_idx)%sf(j, k, l) + &
+                                                                         Omega(2, i)*vSrc_rsy_vf(k, j, l, i)
+                                    end do
+
+                                    flux_src_vf(E_idx)%sf(j, k, l) = flux_src_vf(E_idx)%sf(j, k, l) + &
+                                                                     sigma_coeff*c3_divs(num_dims + 1)%sf(j, k, l)*vSrc_rsy_vf(k, j, l, 2)
                                 end if
                             end if
                         end do
@@ -361,6 +446,44 @@ contains
                                                                          sigma_coeff*c2_divs(num_dims + 1)%sf(j, k, l)*vSrc_rsz_vf(l, k, j, 3)
                                     end if
                                 end if
+
+                                if (c3_idx > 0) then
+                                    w1L = g3L_z(l, k, j, 1)
+                                    w2L = g3L_z(l, k, j, 2)
+                                    w3L = 0._wp
+                                    if (p > 0) w3L = g3L_z(l, k, j, 3)
+
+                                    w1R = g3R_z(l + 1, k, j, 1)
+                                    w2R = g3R_z(l + 1, k, j, 2)
+                                    w3R = 0._wp
+                                    if (p > 0) w3R = g3R_z(l + 1, k, j, 3)
+
+                                    normWL = g3L_z(l, k, j, num_dims + 1)
+                                    normWR = g3R_z(l + 1, k, j, num_dims + 1)
+
+                                    w1 = (w1L + w1R)/2._wp
+                                    w2 = (w2L + w2R)/2._wp
+                                    w3 = (w3L + w3R)/2._wp
+                                    normW = (normWL + normWR)/2._wp
+
+                                    if (normW > capillary_cutoff) then
+                                        sigma_coeff = sigma_3
+                                        @:compute_capillary_stress_tensor()
+
+                                        do i = 1, num_dims
+
+                                            flux_src_vf(momxb + i - 1)%sf(j, k, l) = &
+                                                flux_src_vf(momxb + i - 1)%sf(j, k, l) + Omega(3, i)
+
+                                            flux_src_vf(E_idx)%sf(j, k, l) = flux_src_vf(E_idx)%sf(j, k, l) + &
+                                                                             Omega(3, i)*vSrc_rsz_vf(l, k, j, i)
+
+                                        end do
+
+                                        flux_src_vf(E_idx)%sf(j, k, l) = flux_src_vf(E_idx)%sf(j, k, l) + &
+                                                                         sigma_coeff*c3_divs(num_dims + 1)%sf(j, k, l)*vSrc_rsz_vf(l, k, j, 3)
+                                    end if
+                                end if
                             end do
                         end do
                     end do
@@ -409,6 +532,19 @@ contains
             #:endcall GPU_PARALLEL_LOOP
         end if
 
+        if (c3_idx > 0) then
+            #:call GPU_PARALLEL_LOOP(collapse=3)
+                do l = 0, p
+                    do k = 0, n
+                        do j = 0, m
+                            c3_divs(1)%sf(j, k, l) = 1._wp/(x_cc(j + 1) - x_cc(j - 1))* &
+                                                     (q_prim_vf(c3_idx)%sf(j + 1, k, l) - q_prim_vf(c3_idx)%sf(j - 1, k, l))
+                        end do
+                    end do
+                end do
+            #:endcall GPU_PARALLEL_LOOP
+        end if
+
         #:call GPU_PARALLEL_LOOP(collapse=3)
             do l = 0, p
                 do k = 0, n
@@ -427,6 +563,19 @@ contains
                         do j = 0, m
                             c2_divs(2)%sf(j, k, l) = 1._wp/(y_cc(k + 1) - y_cc(k - 1))* &
                                                      (q_prim_vf(c2_idx)%sf(j, k + 1, l) - q_prim_vf(c2_idx)%sf(j, k - 1, l))
+                        end do
+                    end do
+                end do
+            #:endcall GPU_PARALLEL_LOOP
+        end if
+
+        if (c3_idx > 0) then
+            #:call GPU_PARALLEL_LOOP(collapse=3)
+                do l = 0, p
+                    do k = 0, n
+                        do j = 0, m
+                            c3_divs(2)%sf(j, k, l) = 1._wp/(y_cc(k + 1) - y_cc(k - 1))* &
+                                                     (q_prim_vf(c3_idx)%sf(j, k + 1, l) - q_prim_vf(c3_idx)%sf(j, k - 1, l))
                         end do
                     end do
                 end do
@@ -452,6 +601,19 @@ contains
                             do j = 0, m
                                 c2_divs(3)%sf(j, k, l) = 1._wp/(z_cc(l + 1) - z_cc(l - 1))* &
                                                          (q_prim_vf(c2_idx)%sf(j, k, l + 1) - q_prim_vf(c2_idx)%sf(j, k, l - 1))
+                            end do
+                        end do
+                    end do
+                #:endcall GPU_PARALLEL_LOOP
+            end if
+
+            if (c3_idx > 0) then
+                #:call GPU_PARALLEL_LOOP(collapse=3)
+                    do l = 0, p
+                        do k = 0, n
+                            do j = 0, m
+                                c3_divs(3)%sf(j, k, l) = 1._wp/(z_cc(l + 1) - z_cc(l - 1))* &
+                                                         (q_prim_vf(c3_idx)%sf(j, k, l + 1) - q_prim_vf(c3_idx)%sf(j, k, l - 1))
                             end do
                         end do
                     end do
@@ -499,9 +661,30 @@ contains
             #:endcall GPU_PARALLEL_LOOP
         end if
 
+        if (c3_idx > 0) then
+            #:call GPU_PARALLEL_LOOP(collapse=3)
+                do l = 0, p
+                    do k = 0, n
+                        do j = 0, m
+                            c3_divs(num_dims + 1)%sf(j, k, l) = 0._wp
+                            $:GPU_LOOP(parallelism='[seq]')
+                            do i = 1, num_dims
+                                c3_divs(num_dims + 1)%sf(j, k, l) = &
+                                    c3_divs(num_dims + 1)%sf(j, k, l) + &
+                                    c3_divs(i)%sf(j, k, l)**2._wp
+                            end do
+                            c3_divs(num_dims + 1)%sf(j, k, l) = &
+                                sqrt(real(c3_divs(num_dims + 1)%sf(j, k, l), kind=wp))
+                        end do
+                    end do
+                end do
+            #:endcall GPU_PARALLEL_LOOP
+        end if
+
         call s_populate_capillary_buffers(c_divs, bc_type)
 
         if (c2_idx > 0) call s_populate_capillary_buffers(c2_divs, bc_type)
+        if (c3_idx > 0) call s_populate_capillary_buffers(c3_divs, bc_type)
 
         iv%beg = 1; iv%end = num_dims + 1
 
@@ -513,6 +696,12 @@ contains
         if (c2_idx > 0) then
             do i = 1, num_dims
                 call s_reconstruct_cell_boundary_values_capillary(c2_divs, g2L_x, g2L_y, g2L_z, g2R_x, g2R_y, g2R_z, i)
+            end do
+        end if
+
+        if (c3_idx > 0) then
+            do i = 1, num_dims
+                call s_reconstruct_cell_boundary_values_capillary(c3_divs, g3L_x, g3L_y, g3L_z, g3R_x, g3R_y, g3R_z, i)
             end do
         end if
 

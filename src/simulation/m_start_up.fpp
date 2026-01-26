@@ -174,7 +174,7 @@ contains
             polydisperse, poly_sigma, qbmm, &
             relax, relax_model, &
             palpha_eps, ptgalpha_eps, &
-            file_per_process, sigma, sigma_2, &
+            file_per_process, sigma, sigma_2, sigma_3, &
             pi_fac, adv_n, adap_dt, adap_dt_tol, adap_dt_max_iters, &
             bf_x, bf_y, bf_z, &
             k_x, k_y, k_z, w_x, w_y, w_z, p_x, p_y, p_z, &
@@ -1530,7 +1530,7 @@ contains
             & gamma_v,mu_v,gamma_m,gamma_n,mu_n,gam]')
 
         $:GPU_UPDATE(device='[acoustic_source, num_source]')
-        $:GPU_UPDATE(device='[sigma, sigma_2, surface_tension, c_idx, c2_idx]')
+        $:GPU_UPDATE(device='[sigma, sigma_2, sigma_3, surface_tension, c_idx, c2_idx, c3_idx]')
 
         $:GPU_UPDATE(device='[dx,dy,dz,x_cb,x_cc,y_cb,y_cc,z_cb,z_cc]')
         $:GPU_UPDATE(device='[bc_x%vb1,bc_x%vb2,bc_x%vb3,bc_x%ve1,bc_x%ve2,bc_x%ve3]')
