@@ -143,7 +143,7 @@ print(
             "riemann_solver": 2,
             "wave_speeds": 1,
             "avg_state": 2,
-            "surface_tension": "T",
+            "surface_tension": "F",
             "viscous": "T",
             "elliptic_smoothing": "F",
             #"elliptic_smoothing_iters": 50,
