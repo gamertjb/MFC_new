@@ -50,11 +50,11 @@ uA = 60.0
 qFA = 40.0
 uJ = uA * math.sqrt(qFA * rhoA / rhoL)
 
-# Domain extents (trimmed version of the original case)
+# Domain extents (trimmed to the lower-left quarter of the original case)
 x_beg = -5.0 * djet
-x_end = 25.0 * djet
+x_end = x_beg + 0.25 * (25.0 * djet - x_beg)
 y_beg = 0.0
-y_end = 20.0 * djet
+y_end = y_beg + 0.25 * (20.0 * djet - y_beg)
 
 Lx = x_end - x_beg
 Ly = y_end - y_beg
@@ -99,7 +99,7 @@ jet_center_y = y_beg + 0.5 * jet_length_y
 bubble_charwidth = 2.0 * djet
 
 # Eulerian bubble sizing for the initial vapor bubble in the jet
-bubble_radius = 0.05 * djet
+bubble_radius = 0.10 * djet
 bubble_center_x = jet_center_x
 bubble_center_y = jet_center_y
 
