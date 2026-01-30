@@ -120,6 +120,7 @@ module m_global_parameters
     type(int_bounds_info) :: xi_idx                !< Indexes of first and last reference map eqns.
     integer :: c_idx                               !< Index of the color function
     integer :: c2_idx                              !< Index of the secondary color function
+    integer :: c3_idx                              !< Index of the tertiary color function
     type(int_bounds_info) :: species_idx           !< Indexes of first & last concentration eqns.
     integer :: damage_idx                          !< Index of damage state variable (D) for continuum damage model
 
@@ -265,6 +266,7 @@ module m_global_parameters
     !> @{
     real(wp) :: sigma
     real(wp) :: sigma_2
+    real(wp) :: sigma_3
     logical :: surface_tension
     !> @}
 
@@ -528,6 +530,7 @@ contains
         ! surface tension modeling
         sigma = dflt_real
         sigma_2 = dflt_real
+        sigma_3 = dflt_real
         pi_fac = 1._wp
 
         ! Immersed Boundaries
@@ -976,12 +979,16 @@ contains
                 if (num_fluids > 2) then
                     c2_idx = sys_size + 1
                     sys_size = c2_idx
+                    c3_idx = sys_size + 1
+                    sys_size = c3_idx
                 else
                     c2_idx = 0
+                    c3_idx = 0
                 end if
             else
                 c_idx = 0
                 c2_idx = 0
+                c3_idx = 0
             end if
 
             if (cont_damage) then

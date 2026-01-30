@@ -264,6 +264,7 @@ module m_derived_types
 
         real(wp) :: cf_val !! color function value
         real(wp) :: cf_val2 !! secondary color function value
+        real(wp) :: cf_val3 !! tertiary color function value
         real(wp) :: Y(1:num_species)
 
         !! STL or OBJ model input parameter
@@ -483,4 +484,3 @@ module m_derived_types
     end type
 
 end module m_derived_types
-

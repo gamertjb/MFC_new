@@ -250,6 +250,12 @@ contains
                 $:GPU_ENTER_DATA(copyin='[q_prim_qp%vf(c2_idx)%sf]')
                 $:GPU_ENTER_DATA(attach='[q_prim_qp%vf(c2_idx)%sf]')
             end if
+            if (c3_idx > 0) then
+                q_prim_qp%vf(c3_idx)%sf => &
+                    q_cons_qp%vf(c3_idx)%sf
+                $:GPU_ENTER_DATA(copyin='[q_prim_qp%vf(c3_idx)%sf]')
+                $:GPU_ENTER_DATA(attach='[q_prim_qp%vf(c3_idx)%sf]')
+            end if
         end if
 
         ! Allocation/Association of flux_n, flux_src_n, and flux_gsrc_n
@@ -2171,4 +2177,3 @@ contains
     end subroutine s_finalize_rhs_module
 
 end module m_rhs
-

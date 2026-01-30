@@ -394,6 +394,11 @@ contains
             if (num_fluids == 1) then
                 alpha_rho_K(1) = q_vf(contxb)%sf(k, l, r)
                 alpha_K(1) = 1._wp
+            else if (advxe - advxb + 1 == num_fluids) then
+                do i = 1, num_fluids
+                    alpha_rho_K(i) = q_vf(i)%sf(k, l, r)
+                    alpha_K(i) = q_vf(advxb + i - 1)%sf(k, l, r)
+                end do
             else
                 do i = 1, num_fluids - 1
                     alpha_rho_K(i) = q_vf(i)%sf(k, l, r)
@@ -859,6 +864,12 @@ contains
                             if (num_fluids == 1) then
                                 alpha_rho_K(1) = qK_cons_vf(contxb)%sf(j, k, l)
                                 alpha_K(1) = 1._wp
+                            else if (advxe - advxb + 1 == num_fluids) then
+                                $:GPU_LOOP(parallelism='[seq]')
+                                do i = 1, num_fluids
+                                    alpha_rho_K(i) = qK_cons_vf(i)%sf(j, k, l)
+                                    alpha_K(i) = qK_cons_vf(advxb + i - 1)%sf(j, k, l)
+                                end do
                             else
                                 $:GPU_LOOP(parallelism='[seq]')
                                 do i = 1, num_fluids - 1
@@ -1131,6 +1142,7 @@ contains
                         if (surface_tension) then
                             qK_prim_vf(c_idx)%sf(j, k, l) = qK_cons_vf(c_idx)%sf(j, k, l)
                             if (c2_idx > 0) qK_prim_vf(c2_idx)%sf(j, k, l) = qK_cons_vf(c2_idx)%sf(j, k, l)
+                            if (c3_idx > 0) qK_prim_vf(c3_idx)%sf(j, k, l) = qK_cons_vf(c3_idx)%sf(j, k, l)
                         end if
 
                         if (cont_damage) qK_prim_vf(damage_idx)%sf(j, k, l) = qK_cons_vf(damage_idx)%sf(j, k, l)
@@ -1405,6 +1417,7 @@ contains
                     if (surface_tension) then
                         q_cons_vf(c_idx)%sf(j, k, l) = q_prim_vf(c_idx)%sf(j, k, l)
                         if (c2_idx > 0) q_cons_vf(c2_idx)%sf(j, k, l) = q_prim_vf(c2_idx)%sf(j, k, l)
+                        if (c3_idx > 0) q_cons_vf(c3_idx)%sf(j, k, l) = q_prim_vf(c3_idx)%sf(j, k, l)
                     end if
 
                     if (cont_damage) q_cons_vf(damage_idx)%sf(j, k, l) = q_prim_vf(damage_idx)%sf(j, k, l)

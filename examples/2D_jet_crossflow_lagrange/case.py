@@ -156,6 +156,7 @@ print(
             "patch_icpp(1)%alpha(1)": eps,
             "patch_icpp(1)%cf_val": 0,
             "patch_icpp(1)%cf_val2": 0,
+            "patch_icpp(1)%cf_val3": 0,
             "patch_icpp(1)%alpha_rho(2)": eps * rho_vapor,
             "patch_icpp(1)%alpha(2)": eps,
             "patch_icpp(1)%alpha_rho(3)": (1.0 - 2.0 * eps) * rho_air,
@@ -180,6 +181,7 @@ print(
             "patch_icpp(2)%alpha(3)": eps,
             "patch_icpp(2)%cf_val": 1,
             "patch_icpp(2)%cf_val2": 1,
+            "patch_icpp(2)%cf_val3": 0,
             "patch_icpp(2)%r0": 1.0,
             "patch_icpp(2)%v0": 0.0,
             # Fluid properties
@@ -195,6 +197,7 @@ print(
             # Surface tension --------------------------------------------------
             "sigma": sigma_hex_air,
             "sigma_2": sigma_hex_air,
+            "sigma_3": sigma_hex_air,
         }
     )
 )

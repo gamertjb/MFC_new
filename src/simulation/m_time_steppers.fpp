@@ -339,6 +339,13 @@ contains
                         idwbuff(3)%beg:idwbuff(3)%end))
                     @:ACC_SETUP_SFs(q_prim_vf(c2_idx))
                 end if
+
+                if (c3_idx > 0) then
+                    @:ALLOCATE(q_prim_vf(c3_idx)%sf(idwbuff(1)%beg:idwbuff(1)%end, &
+                        idwbuff(2)%beg:idwbuff(2)%end, &
+                        idwbuff(3)%beg:idwbuff(3)%end))
+                    @:ACC_SETUP_SFs(q_prim_vf(c3_idx))
+                end if
             end if
 
             if (chemistry) then
