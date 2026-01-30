@@ -394,6 +394,11 @@ contains
             if (num_fluids == 1) then
                 alpha_rho_K(1) = q_vf(contxb)%sf(k, l, r)
                 alpha_K(1) = 1._wp
+            else if (advxe - advxb + 1 == num_fluids) then
+                do i = 1, num_fluids
+                    alpha_rho_K(i) = q_vf(i)%sf(k, l, r)
+                    alpha_K(i) = q_vf(advxb + i - 1)%sf(k, l, r)
+                end do
             else
                 do i = 1, num_fluids - 1
                     alpha_rho_K(i) = q_vf(i)%sf(k, l, r)
@@ -859,6 +864,12 @@ contains
                             if (num_fluids == 1) then
                                 alpha_rho_K(1) = qK_cons_vf(contxb)%sf(j, k, l)
                                 alpha_K(1) = 1._wp
+                            else if (advxe - advxb + 1 == num_fluids) then
+                                $:GPU_LOOP(parallelism='[seq]')
+                                do i = 1, num_fluids
+                                    alpha_rho_K(i) = qK_cons_vf(i)%sf(j, k, l)
+                                    alpha_K(i) = qK_cons_vf(advxb + i - 1)%sf(j, k, l)
+                                end do
                             else
                                 $:GPU_LOOP(parallelism='[seq]')
                                 do i = 1, num_fluids - 1

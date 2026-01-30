@@ -112,6 +112,12 @@ contains
             if (num_fluids == 1) then
                 alpha_rho(1) = q_prim_vf(contxb)%sf(j, k, l)
                 alpha(1) = 1._wp
+            else if (advxe - advxb + 1 == num_fluids) then
+                $:GPU_LOOP(parallelism='[seq]')
+                do i = 1, num_fluids
+                    alpha_rho(i) = q_prim_vf(i)%sf(j, k, l)
+                    alpha(i) = q_prim_vf(advxb + i - 1)%sf(j, k, l)
+                end do
             else
                 $:GPU_LOOP(parallelism='[seq]')
                 do i = 1, num_fluids - 1
