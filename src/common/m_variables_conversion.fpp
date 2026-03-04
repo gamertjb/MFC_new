@@ -3,7 +3,9 @@
 !! @brief Contains module m_variables_conversion
 
 #:include 'macros.fpp'
-#:include 'case.fpp'
+! NOTE: This module does not consume case-optimized Fypp symbols directly.
+! Keeping it independent from generated case.fpp avoids accidental injection
+! of per-case text into this core provider module.
 
 !> @brief This module consists of subroutines used in the conversion of the
 !!              conservative variables into the primitive ones and vice versa. In
