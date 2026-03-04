@@ -403,6 +403,17 @@ macro(HANDLE_SOURCES target useCommon)
         set(_m_variables_conversion_f90 "${CMAKE_BINARY_DIR}/fypp/${target}/m_variables_conversion.fpp.f90")
         list(REMOVE_ITEM ${target}_SRCs "${_m_variables_conversion_f90}")
         list(INSERT ${target}_SRCs 0 "${_m_variables_conversion_f90}")
+
+        # Extra safeguard for toolchains where CMake Fortran module scanning
+        # misidentifies providers from generated sources: require
+        # m_assign_variables object compilation to wait for
+        # m_variables_conversion object/.mod.
+        set(_m_assign_variables_f90 "${CMAKE_BINARY_DIR}/fypp/${target}/m_assign_variables.fpp.f90")
+        set_source_files_properties(
+            "${_m_assign_variables_f90}"
+            PROPERTIES
+            OBJECT_DEPENDS "${CMAKE_BINARY_DIR}/CMakeFiles/pre_process.dir/fypp/pre_process/m_variables_conversion.fpp.f90.o;${CMAKE_BINARY_DIR}/m_variables_conversion.mod"
+        )
     endif()
 endmacro()
 
