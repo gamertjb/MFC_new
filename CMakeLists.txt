@@ -394,6 +394,16 @@ macro(HANDLE_SOURCES target useCommon)
 
         list(APPEND ${target}_SRCs ${f90})
     endforeach()
+
+    # Some toolchains fail to infer all module dependencies from preprocessed
+    # Fortran sources. Ensure the core provider module is compiled first for
+    # pre_process so downstream users (e.g. m_assign_variables) can consume
+    # m_variables_conversion.mod deterministically.
+    if ("${target}" STREQUAL "pre_process")
+        set(_m_variables_conversion_f90 "${CMAKE_BINARY_DIR}/fypp/${target}/m_variables_conversion.fpp.f90")
+        list(REMOVE_ITEM ${target}_SRCs "${_m_variables_conversion_f90}")
+        list(INSERT ${target}_SRCs 0 "${_m_variables_conversion_f90}")
+    endif()
 endmacro()
 
 
