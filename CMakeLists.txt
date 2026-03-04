@@ -355,6 +355,16 @@ macro(HANDLE_SOURCES target useCommon)
         list(APPEND ${target}_incs ${common_incs})
     endif()
 
+    # GNU/gfortran can emit "linemarker ignored due to incorrect nesting"
+    # for some Fypp-generated include stacks. In that case, CMake's Fortran
+    # dependency scanning may fail to detect module providers/consumers
+    # correctly. Disable Fypp line-number markers for GNU builds to preserve
+    # reliable .mod ordering.
+    set(FYPP_LINE_NUMBER_ARGS --line-numbering --line-numbering-mode=nocontlines)
+    if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+        set(FYPP_LINE_NUMBER_ARGS)
+    endif()
+
     # /path/to/*.fpp (used by <target>) -> <build>/fypp/<target>/*.f90
     file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/fypp/${target}")
     foreach(fpp ${${target}_FPPs})
@@ -373,10 +383,9 @@ macro(HANDLE_SOURCES target useCommon)
                                  -D MFC_COMPILER="${CMAKE_Fortran_COMPILER_ID}"
                                  -D MFC_CASE_OPTIMIZATION=False
                                  -D chemistry=False
-                                 --line-numbering
                                  --no-folding
-								 --line-length=999
-		 						 --line-numbering-mode=nocontlines
+					 --line-length=999
+		 			 ${FYPP_LINE_NUMBER_ARGS}
                                  "${fpp}" "${f90}"
             DEPENDS  "${fpp};${${target}_incs}"
             COMMENT  "Preprocessing (Fypp) ${fpp_filename}"
