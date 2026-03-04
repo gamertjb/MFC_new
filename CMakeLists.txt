@@ -407,12 +407,12 @@ macro(HANDLE_SOURCES target useCommon)
         # Extra safeguard for toolchains where CMake Fortran module scanning
         # misidentifies providers from generated sources: require
         # m_assign_variables object compilation to wait for
-        # m_variables_conversion object/.mod.
+        # m_variables_conversion object generation.
         set(_m_assign_variables_f90 "${CMAKE_BINARY_DIR}/fypp/${target}/m_assign_variables.fpp.f90")
         set_source_files_properties(
             "${_m_assign_variables_f90}"
             PROPERTIES
-            OBJECT_DEPENDS "${CMAKE_BINARY_DIR}/CMakeFiles/pre_process.dir/fypp/pre_process/m_variables_conversion.fpp.f90.o;${CMAKE_BINARY_DIR}/m_variables_conversion.mod"
+            OBJECT_DEPENDS "${CMAKE_BINARY_DIR}/CMakeFiles/pre_process.dir/fypp/pre_process/m_variables_conversion.fpp.f90.o"
         )
     endif()
 endmacro()
