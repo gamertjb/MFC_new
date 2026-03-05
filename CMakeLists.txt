@@ -355,6 +355,16 @@ macro(HANDLE_SOURCES target useCommon)
         list(APPEND ${target}_incs ${common_incs})
     endif()
 
+    # GNU/gfortran can emit "linemarker ignored due to incorrect nesting"
+    # for some Fypp-generated include stacks. In that case, CMake's Fortran
+    # dependency scanning may fail to detect module providers/consumers
+    # correctly. Disable Fypp line-number markers for GNU builds to preserve
+    # reliable .mod ordering.
+    set(FYPP_LINE_NUMBER_ARGS --line-numbering --line-numbering-mode=nocontlines)
+    if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+        set(FYPP_LINE_NUMBER_ARGS)
+    endif()
+
     # /path/to/*.fpp (used by <target>) -> <build>/fypp/<target>/*.f90
     file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/fypp/${target}")
     foreach(fpp ${${target}_FPPs})
@@ -373,10 +383,9 @@ macro(HANDLE_SOURCES target useCommon)
                                  -D MFC_COMPILER="${CMAKE_Fortran_COMPILER_ID}"
                                  -D MFC_CASE_OPTIMIZATION=False
                                  -D chemistry=False
-                                 --line-numbering
                                  --no-folding
-								 --line-length=999
-		 						 --line-numbering-mode=nocontlines
+					 --line-length=999
+		 			 ${FYPP_LINE_NUMBER_ARGS}
                                  "${fpp}" "${f90}"
             DEPENDS  "${fpp};${${target}_incs}"
             COMMENT  "Preprocessing (Fypp) ${fpp_filename}"
@@ -385,6 +394,27 @@ macro(HANDLE_SOURCES target useCommon)
 
         list(APPEND ${target}_SRCs ${f90})
     endforeach()
+
+    # Some toolchains fail to infer all module dependencies from preprocessed
+    # Fortran sources. Ensure the core provider module is compiled first for
+    # pre_process so downstream users (e.g. m_assign_variables) can consume
+    # m_variables_conversion.mod deterministically.
+    if ("${target}" STREQUAL "pre_process")
+        set(_m_variables_conversion_f90 "${CMAKE_BINARY_DIR}/fypp/${target}/m_variables_conversion.fpp.f90")
+        list(REMOVE_ITEM ${target}_SRCs "${_m_variables_conversion_f90}")
+        list(INSERT ${target}_SRCs 0 "${_m_variables_conversion_f90}")
+
+        # Extra safeguard for toolchains where CMake Fortran module scanning
+        # misidentifies providers from generated sources: require
+        # m_assign_variables object compilation to wait for
+        # m_variables_conversion object generation.
+        set(_m_assign_variables_f90 "${CMAKE_BINARY_DIR}/fypp/${target}/m_assign_variables.fpp.f90")
+        set_source_files_properties(
+            "${_m_assign_variables_f90}"
+            PROPERTIES
+            OBJECT_DEPENDS "${CMAKE_BINARY_DIR}/CMakeFiles/pre_process.dir/fypp/pre_process/m_variables_conversion.fpp.f90.o"
+        )
+    endif()
 endmacro()
 
 
