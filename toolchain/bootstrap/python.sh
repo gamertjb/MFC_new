@@ -107,6 +107,8 @@ fi
 source "$(pwd)/build/venv/bin/activate"
 ok "(venv) Entered the $MAGENTA$(python3 --version)$COLOR_RESET virtual environment (>= $MAGENTA$MFC_PYTHON_MIN_STR$COLOR_RESET)."
 
+venv_python="$(pwd)/build/venv/bin/python3"
+
 
 # Install Python dependencies if, either:
 # - This script is running for the first time
@@ -129,7 +131,7 @@ if ! cmp "$(pwd)/toolchain/pyproject.toml" "$(pwd)/build/pyproject.toml" > /dev/
         fi
     done
 
-    if ! PIP_DISABLE_PIP_VERSION_CHECK=1 MAKEFLAGS=$nthreads pip3 install "$(pwd)/toolchain"; then
+    if ! PIP_DISABLE_PIP_VERSION_CHECK=1 MAKEFLAGS=$nthreads "$venv_python" -m pip install "$(pwd)/toolchain"; then
         error "(venv) Installation failed."
 
         log   "(venv) Exiting the$MAGENTA Python$COLOR_RESET virtual environment."
