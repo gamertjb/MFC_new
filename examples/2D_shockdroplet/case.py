@@ -68,7 +68,7 @@ Nx = int(cells_per_D * Lx / D0)
 Ny = int(cells_per_D * Ly / D0)
 
 dx = Lx / Nx
-cfl = 0.15
+cfl = 0.05
 
 # conservative max speed estimate
 c_as = math.sqrt(gam_a * (p_as + pi_a) / rho_as)
@@ -81,7 +81,7 @@ dt = cfl * dx / max_speed
 t_stop = 2.5 * D0 / ss
 t_save = t_stop / 100.0
 
-eps = 1.0e-6
+eps = 1.0e-4
 
 x_beg = -3.0 * D0
 x_end = 9.0 * D0
@@ -118,15 +118,15 @@ print(
             "num_fluids": 3,
             "alt_soundspeed": "F",
             "mpp_lim": "T",
-            "mixture_err": "T",
+            "mixture_err": "F",
             "relax": "T",
             "relax_model": 6,
             "palpha_eps": eps,
             "ptgalpha_eps": eps,
-            "time_stepper": 3,
+            "time_stepper": 1,
             "weno_order": 3,
-            "weno_eps": 1.0e-16,
-            "mapped_weno": "T",
+            "weno_eps": 1.0e-12,
+            "mapped_weno": "F",
             "riemann_solver": 2,
             "wave_speeds": 1,
             "avg_state": 2,
